@@ -1,0 +1,1 @@
+export const ERC7432InterfaceId = '0x688fce16'
