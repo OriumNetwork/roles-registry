@@ -11,8 +11,8 @@ import { NftMetadata, Role } from './types'
 const { HashZero, AddressZero } = ethers.constants
 const ONE_DAY = 60 * 60 * 24
 
-describe('ERC7432', () => {
-  let ERC7432: Contract
+describe('RolesRegistry', () => {
+  let RolesRegistry: Contract
   let nft: Contract
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -73,8 +73,8 @@ describe('ERC7432', () => {
   })
 
   beforeEach(async () => {
-    const ERC7432Factory = await ethers.getContractFactory('ERC7432')
-    ERC7432 = await ERC7432Factory.deploy()
+    const RolesRegistryFactory = await ethers.getContractFactory('RolesRegistry')
+    RolesRegistry = await RolesRegistryFactory.deploy()
 
     const NftFactory = await ethers.getContractFactory('Nft')
     nft = await NftFactory.deploy()
@@ -99,11 +99,11 @@ describe('ERC7432', () => {
     describe('Grant role', async () => {
       it('should grant role', async () => {
         await expect(
-          ERC7432
+          RolesRegistry
             .connect(roleCreator)
             .grantRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId, expirationDate, data),
         )
-          .to.emit(ERC7432, 'RoleGranted')
+          .to.emit(RolesRegistry, 'RoleGranted')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, data)
       })
       it('should NOT grant role if expiration date is in the past', async () => {
@@ -112,17 +112,17 @@ describe('ERC7432', () => {
         const expirationDateInThePast = block.timestamp - ONE_DAY
 
         await expect(
-          ERC7432
+          RolesRegistry
             .connect(roleCreator)
             .grantRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId, expirationDateInThePast, HashZero),
-        ).to.be.revertedWith('ERC7432: expiration date must be in the future')
+        ).to.be.revertedWith('RolesRegistry: expiration date must be in the future')
       })
     })
 
     describe('Revoke role', async () => {
       it('should revoke role', async () => {
-        await expect(ERC7432.connect(roleCreator).revokeRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId))
-          .to.emit(ERC7432, 'RoleRevoked')
+        await expect(RolesRegistry.connect(roleCreator).revokeRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId))
+          .to.emit(RolesRegistry, 'RoleRevoked')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address)
       })
     })
@@ -130,19 +130,19 @@ describe('ERC7432', () => {
     describe('Has role', async () => {
       beforeEach(async () => {
         await expect(
-          ERC7432
+          RolesRegistry
             .connect(roleCreator)
             .grantRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId, expirationDate, HashZero),
         )
-          .to.emit(ERC7432, 'RoleGranted')
+          .to.emit(RolesRegistry, 'RoleGranted')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, HashZero)
 
         await expect(
-          ERC7432
+          RolesRegistry
             .connect(roleCreator)
             .grantRole(PROPERTY_MANAGER, userTwo.address, AddressZero, tokenId, expirationDate, HashZero),
         )
-          .to.emit(ERC7432, 'RoleGranted')
+          .to.emit(RolesRegistry, 'RoleGranted')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userTwo.address, expirationDate, HashZero)
       })
 
@@ -153,7 +153,7 @@ describe('ERC7432', () => {
 
         it('should return true for the last user granted, and false for the others', async () => {
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_MANAGER,
               roleCreator.address,
               userOne.address,
@@ -164,7 +164,7 @@ describe('ERC7432', () => {
           ).to.be.equal(false)
 
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_MANAGER,
               roleCreator.address,
               userTwo.address,
@@ -179,7 +179,7 @@ describe('ERC7432', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_MANAGER,
               roleCreator.address,
               userOne.address,
@@ -198,7 +198,7 @@ describe('ERC7432', () => {
 
         it('should return true for all users', async () => {
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_TENANT,
               roleCreator.address,
               userOne.address,
@@ -209,7 +209,7 @@ describe('ERC7432', () => {
           ).to.be.equal(true)
 
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_TENANT,
               roleCreator.address,
               userTwo.address,
@@ -224,7 +224,7 @@ describe('ERC7432', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_TENANT,
               roleCreator.address,
               userOne.address,
@@ -235,7 +235,7 @@ describe('ERC7432', () => {
           ).to.be.equal(false)
 
           expect(
-            await ERC7432.hasRole(
+            await RolesRegistry.hasRole(
               PROPERTY_TENANT,
               roleCreator.address,
               userTwo.address,
@@ -264,14 +264,14 @@ describe('ERC7432', () => {
         const customData = defaultAbiCoder.encode(['(uint256 eventId,uint256[] split)[]'], [profitSplit])
 
         await expect(
-          ERC7432
+          RolesRegistry
             .connect(roleCreator)
             .grantRole(PROPERTY_MANAGER, userOne.address, AddressZero, tokenId, expirationDate, customData),
         )
-          .to.emit(ERC7432, 'RoleGranted')
+          .to.emit(RolesRegistry, 'RoleGranted')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, customData)
 
-        const returnedData = await ERC7432.roleData(
+        const returnedData = await RolesRegistry.roleData(
           PROPERTY_MANAGER,
           roleCreator.address,
           userOne.address,
@@ -279,7 +279,7 @@ describe('ERC7432', () => {
           tokenId,
         )
 
-        const returnedExpirationDate = await ERC7432.roleExpirationDate(
+        const returnedExpirationDate = await RolesRegistry.roleExpirationDate(
           PROPERTY_MANAGER,
           roleCreator.address,
           userOne.address,
@@ -308,11 +308,11 @@ describe('ERC7432', () => {
         const rentalCost = ethers.utils.parseEther('1.5')
         const customData = defaultAbiCoder.encode(['uint256'], [rentalCost])
 
-        await ERC7432
+        await RolesRegistry
           .connect(roleCreator)
           .grantRole(PROPERTY_TENANT, userOne.address, AddressZero, tokenId, expirationDate, customData)
 
-        const returnedData = await ERC7432.roleData(
+        const returnedData = await RolesRegistry.roleData(
           PROPERTY_TENANT,
           roleCreator.address,
           userOne.address,
@@ -329,8 +329,8 @@ describe('ERC7432', () => {
     })
 
     describe('ERC165', async function () {
-      it(`should return true for IERC7432 interface id (${ERC7432InterfaceId})`, async function () {
-        expect(await ERC7432.supportsInterface(ERC7432InterfaceId)).to.be.true
+      it(`should return true for IRolesRegistry interface id (${ERC7432InterfaceId})`, async function () {
+        expect(await RolesRegistry.supportsInterface(ERC7432InterfaceId)).to.be.true
       })
     })
   })

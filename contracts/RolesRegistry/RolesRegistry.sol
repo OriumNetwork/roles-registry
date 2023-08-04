@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { IERC7432 } from "./interfaces/IERC7432.sol";
 
-contract ERC7432 is IERC7432 {
+contract RolesRegistry is IERC7432 {
     // owner => user => tokenAddress => tokenId => role => struct(expirationDate, data)
     mapping(address => mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => RoleData)))))
         public roleAssignments;
@@ -13,9 +13,11 @@ contract ERC7432 is IERC7432 {
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => address)))) public lastRoleAssignment;
 
     modifier validExpirationDate(uint64 _expirationDate) {
-        require(_expirationDate > block.timestamp, "ERC7432: expiration date must be in the future");
+        require(_expirationDate > block.timestamp, "RolesRegistry: expiration date must be in the future");
         _;
     }
+
+    constructor() {}
 
     function grantRole(
         bytes32 _role,
@@ -78,5 +80,14 @@ contract ERC7432 is IERC7432 {
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC7432).interfaceId;
+    }
+
+    function lastGrantee(
+        bytes32 _role,
+        address _grantor,
+        address _tokenAddress,
+        uint256 _tokenId
+    ) external view returns (address) {
+        return lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role];
     }
 }
