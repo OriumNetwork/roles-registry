@@ -5,7 +5,8 @@ pragma solidity 0.8.9;
 import { IERC7432 } from "./interfaces/IERC7432.sol";
 
 contract RolesRegistry is IERC7432 {
-    // owner => user => tokenAddress => tokenId => role => struct(expirationDate, data)
+
+    // owner => grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
     mapping(address => mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => RoleData)))))
         public roleAssignments;
 
