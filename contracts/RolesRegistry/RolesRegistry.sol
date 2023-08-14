@@ -71,7 +71,7 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _grantor,
         address _grantee
-    ) external view returns (uint64 expirationDate_){
+    ) external view returns (uint64 expirationDate_) {
         RoleData memory _roleData = roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role];
         return (_roleData.expirationDate);
     }
