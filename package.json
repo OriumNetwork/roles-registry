@@ -5,7 +5,10 @@
     "compile": "npx hardhat compile",
     "node": "npx hardhat node",
     "coverage": "npx hardhat coverage",
-    "clean": "npx hardhat clean"
+    "clean": "npx hardhat clean",
+    "lint": "npx eslint .",
+    "lint-staged": "npx lint-staged",
+    "lint-fix": "npx eslint . --fix && npx prettier --write ."
   },
   "dependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
