@@ -320,7 +320,7 @@ describe('RolesRegistry', () => {
         const propertyManagerRole = nftMetadata.roles.find((role: Role) => role.name === 'PROPERTY_MANAGER')
         const inputs = propertyManagerRole?.inputs[0].components
         const returnDataDecoded = defaultAbiCoder.decode(
-          [`(${inputs?.map((input) => `${input.type} ${input.name}`)})[]`],
+          [`(${inputs?.map(input => `${input.type} ${input.name}`)})[]`],
           returnedData,
         )
         returnDataDecoded.map((data: any) => {
@@ -353,7 +353,7 @@ describe('RolesRegistry', () => {
         )
 
         const tenantRole = nftMetadata.roles.find((role: Role) => role.name === 'PROPERTY_TENANT')
-        const decodedData = defaultAbiCoder.decode([`${tenantRole!.inputs.map((input) => input.type)}`], returnedData)
+        const decodedData = defaultAbiCoder.decode([`${tenantRole!.inputs.map(input => input.type)}`], returnedData)
 
         expect(returnedData).to.equal(customData)
         expect(decodedData[0]).to.deep.equal(rentalCost)

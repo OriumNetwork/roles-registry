@@ -8,9 +8,9 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/oriumnetwork?label=Follow&style=social)](https://twitter.com/OriumNetwork)
 
 This repository contains a minimal implementation of ERC-7432 (Non-Fungible Token Roles).
-ERC-7432 introduces role management for NFTs. Each role assignment is associated with a single NFT and expires automatically at a given timestamp. 
+ERC-7432 introduces role management for NFTs. Each role assignment is associated with a single NFT and expires automatically at a given timestamp.
 
-ERC-7432 can be deeply integrated with dApps to create a utility-sharing mechanism. A good example is in digital real estate. A user can create a digital property NFT and grant a `keccak256("PROPERTY_MANAGER")` role to another user, allowing them to delegate specific utility without compromising ownership. The same user could also grant multiple  `keccak256("PROPERTY_TENANT")` roles, allowing the grantees to access and interact with the digital property.
+ERC-7432 can be deeply integrated with dApps to create a utility-sharing mechanism. A good example is in digital real estate. A user can create a digital property NFT and grant a `keccak256("PROPERTY_MANAGER")` role to another user, allowing them to delegate specific utility without compromising ownership. The same user could also grant multiple `keccak256("PROPERTY_TENANT")` roles, allowing the grantees to access and interact with the digital property.
 
 You can find the full specification [here](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7432.md).
 
