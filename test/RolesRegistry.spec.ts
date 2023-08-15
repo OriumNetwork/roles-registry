@@ -365,5 +365,34 @@ describe('RolesRegistry', () => {
         expect(await RolesRegistry.supportsInterface(ERC7432InterfaceId)).to.be.true
       })
     })
+
+    describe('RevokeAll', async function () {
+      it('should revoke all roles for a nft of a grantor', async function () {
+        const usersAddresses = [userOne.address, userTwo.address]
+
+        for (const userAddress of usersAddresses) {
+          await RolesRegistry.connect(roleCreator).grantRole(
+            PROPERTY_MANAGER,
+            AddressZero,
+            tokenId,
+            userAddress,
+            expirationDate,
+            HashZero,
+          )
+
+          expect(
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userAddress, true),
+          ).to.be.equal(true)
+        }
+
+        await RolesRegistry.connect(roleCreator).revokeAll(AddressZero, tokenId)
+
+        for (const userAddress of usersAddresses) {
+          expect(
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userAddress, true),
+          ).to.be.equal(false)
+        }
+      })
+    })
   })
 })

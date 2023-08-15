@@ -13,6 +13,11 @@ contract RolesRegistry is IERC7432 {
     // grantor => tokenAddress => tokenId => role => grantee
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => address)))) public lastRoleAssignment;
 
+    // grantor => tokenAddress => tokenId  => nonce
+    mapping(address => mapping(address => mapping(uint256 => uint256))) public grantorNonce;
+
+    event RevokeAll(address indexed grantor, address indexed tokenAddress, uint256 indexed tokenId, uint256 nonce);
+
     modifier validExpirationDate(uint64 _expirationDate) {
         require(_expirationDate > block.timestamp, "RolesRegistry: expiration date must be in the future");
         _;
@@ -26,7 +31,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bytes calldata _data
     ) external validExpirationDate(_expirationDate) {
-        roleAssignments[msg.sender][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data);
+        roleAssignments[msg.sender][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data, grantorNonce[msg.sender][_tokenAddress][_tokenId]);
         lastRoleAssignment[msg.sender][_tokenAddress][_tokenId][_role] = _grantee;
         emit RoleGranted(_role, _tokenAddress, _tokenId, _grantee, _expirationDate, _data);
     }
@@ -45,8 +50,10 @@ contract RolesRegistry is IERC7432 {
         address _grantee,
         bool _supportsMultipleAssignments
     ) external view returns (bool) {
-        bool isValid = roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role].expirationDate >
-            block.timestamp;
+        uint256 _grantorNonce = grantorNonce[_grantor][_tokenAddress][_tokenId];
+        RoleData memory _roleData = roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role];
+
+        bool isValid = _roleData.expirationDate > block.timestamp && _roleData.nonce == _grantorNonce;
 
         if (_supportsMultipleAssignments) {
             return isValid;
@@ -88,5 +95,9 @@ contract RolesRegistry is IERC7432 {
         address _grantor
     ) external view returns (address) {
         return lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role];
+    }
+
+    function revokeAll(address _tokenAddress, uint256 _tokenId) external {
+        emit RevokeAll(msg.sender, _tokenAddress, _tokenId, grantorNonce[msg.sender][_tokenAddress][_tokenId]++);
     }
 }

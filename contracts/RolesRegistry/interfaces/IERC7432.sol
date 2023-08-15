@@ -12,6 +12,7 @@ interface IERC7432 is IERC165 {
     struct RoleData {
         uint64 expirationDate;
         bytes data;
+        uint256 nonce;
     }
 
     /// @notice Emitted when a role is granted.
