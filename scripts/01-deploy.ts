@@ -1,4 +1,4 @@
-import { ethers, network as hardhatNetwork } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
 
 const kmsCredentials = {
@@ -8,11 +8,12 @@ const kmsCredentials = {
   keyId: process.env.AWS_KMS_KEY_ID || 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', // KMS key id
 }
 
-const provider = new ethers.providers.JsonRpcProvider(process.env.GOERLI_PROVIDER_URL || '')
-const signer = new AwsKmsSigner(kmsCredentials).connect(provider)
-
-const NETWORK = hardhatNetwork.name
+const NETWORK = network.name
 const CONTRACT_NAME = 'RolesRegistry'
+
+const networkConfig: any = network.config
+const provider = new ethers.providers.JsonRpcProvider(networkConfig.url || '')
+const signer = new AwsKmsSigner(kmsCredentials).connect(provider)
 
 async function main() {
   const operator = await signer.getAddress()
