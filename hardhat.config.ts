@@ -33,13 +33,6 @@ const BASE_CONFIG = {
           runs: 200,
         },
       },
-      {
-        version: '0.5.10',
-        optimizer: {
-          enabled: true,
-          runs: 200,
-        },
-      },
     ],
   },
   mocha: {
