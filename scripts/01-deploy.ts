@@ -21,7 +21,7 @@ async function main() {
 
   const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME)
   const create2Factory = await ethers.getContractAt(
-    'ImmutableCreate2Factory',
+    'IImmutableCreate2Factory',
     '0x0000000000FFe8B47B3e2130213B802212439497', // This address is the same on all networks
     signer,
   )
