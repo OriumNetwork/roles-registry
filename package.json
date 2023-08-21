@@ -11,11 +11,13 @@
     "lint-fix": "npx eslint . --fix && npx prettier --write ."
   },
   "dependencies": {
+    "@govtechsg/ethers-aws-kms-signer": "^2.0.1",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@openzeppelin/contracts": "^4.8.0-rc.1",
     "@openzeppelin/contracts-upgradeable": "^4.8.0-rc.1",
     "@openzeppelin/hardhat-defender": "^1.8.1",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
+    "dotenv": "^16.3.1",
     "ethers": "^5.7.1",
     "hardhat": "^2.11.2",
     "hardhat-spdx-license-identifier": "^2.0.3"

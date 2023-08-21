@@ -353,7 +353,7 @@ describe('RolesRegistry', () => {
         )
 
         const tenantRole = nftMetadata.roles.find((role: Role) => role.name === 'PROPERTY_TENANT')
-        const decodedData = defaultAbiCoder.decode([`${tenantRole!.inputs.map(input => input.type)}`], returnedData)
+        const decodedData = defaultAbiCoder.decode([`${tenantRole?.inputs.map(input => input.type)}`], returnedData)
 
         expect(returnedData).to.equal(customData)
         expect(decodedData[0]).to.deep.equal(rentalCost)
