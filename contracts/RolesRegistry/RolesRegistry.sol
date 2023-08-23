@@ -42,17 +42,22 @@ contract RolesRegistry is IERC7432 {
         address _tokenAddress,
         uint256 _tokenId,
         address _grantor,
-        address _grantee,
-        bool _supportsMultipleAssignments
+        address _grantee
+    ) external view returns (bool) {
+        return roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
+    }
+
+    function hasUniqueRole(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantor,
+        address _grantee
     ) external view returns (bool) {
         bool isValid = roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role].expirationDate >
             block.timestamp;
 
-        if (_supportsMultipleAssignments) {
-            return isValid;
-        } else {
-            return isValid && lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role] == _grantee;
-        }
+        return isValid && lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role] == _grantee;
     }
 
     function roleData(
@@ -72,21 +77,12 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _grantor,
         address _grantee
-    ) external view returns (uint64 expirationDate_) {
+    ) external view returns (uint64 expirationDate_){
         RoleData memory _roleData = roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role];
         return (_roleData.expirationDate);
     }
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC7432).interfaceId;
-    }
-
-    function lastGrantee(
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _grantor
-    ) external view returns (address) {
-        return lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role];
     }
 }

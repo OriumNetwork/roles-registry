@@ -1,5 +1,6 @@
 import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
+import { DeployAddresses } from '../config'
 
 const kmsCredentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AKIAxxxxxxxxxxxxxxxx', // credentials for your IAM user with KMS access
@@ -22,7 +23,7 @@ async function main() {
   const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME)
   const create2Factory = await ethers.getContractAt(
     'IImmutableCreate2Factory',
-    '0x0000000000FFe8B47B3e2130213B802212439497', // This address is the same on all networks
+    DeployAddresses.ImmutableCreate2Factory, // This address is the same on all networks
     signer,
   )
 

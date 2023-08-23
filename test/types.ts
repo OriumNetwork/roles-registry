@@ -7,7 +7,7 @@ export interface NftMetadata {
 export interface Role {
   name: string
   description: string
-  supportsMultipleAssignments: boolean
+  isUnique: boolean
   inputs: Input[]
 }
 
