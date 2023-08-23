@@ -37,7 +37,7 @@ describe('RolesRegistry', () => {
         {
           name: 'PROPERTY_MANAGER',
           description: 'Property Manager',
-          supportsMultipleAssignments: false,
+          isUnique: false,
           inputs: [
             {
               name: 'profitSplit',
@@ -58,7 +58,7 @@ describe('RolesRegistry', () => {
         {
           name: 'PROPERTY_TENANT',
           description: 'Property Tenant',
-          supportsMultipleAssignments: true,
+          isUnique: true,
           inputs: [
             {
               name: 'rentalCost',
@@ -157,9 +157,9 @@ describe('RolesRegistry', () => {
         await expect(
           RolesRegistry.connect(roleCreator).grantRole(
             PROPERTY_MANAGER,
-            userTwo.address,
             AddressZero,
             tokenId,
+            userTwo.address,
             expirationDate,
             HashZero,
           ),
@@ -169,30 +169,24 @@ describe('RolesRegistry', () => {
       })
 
       describe('Single User Roles', async () => {
-        const supportMultipleUsers = nftMetadata.roles.find(
-          (role: any) => role.name === 'PROPERTY_MANAGER',
-        )?.supportsMultipleAssignments
-
         it('should return true for the last user granted, and false for the others', async () => {
           expect(
-            await RolesRegistry.hasRole(
+            await RolesRegistry.hasUniqueRole(
               PROPERTY_MANAGER,
-              roleCreator.address,
-              userOne.address,
               AddressZero,
               tokenId,
-              supportMultipleUsers,
+              roleCreator.address,
+              userOne.address,
             ),
           ).to.be.equal(false)
 
           expect(
-            await RolesRegistry.hasRole(
+            await RolesRegistry.hasUniqueRole(
               PROPERTY_MANAGER,
-              roleCreator.address,
-              userTwo.address,
               AddressZero,
               tokenId,
-              supportMultipleUsers,
+              roleCreator.address,
+              userTwo.address,
             ),
           ).to.be.equal(true)
         })
@@ -201,44 +195,25 @@ describe('RolesRegistry', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await RolesRegistry.hasRole(
+            await RolesRegistry.hasUniqueRole(
               PROPERTY_MANAGER,
-              roleCreator.address,
-              userOne.address,
               AddressZero,
               tokenId,
-              supportMultipleUsers,
+              roleCreator.address,
+              userOne.address,
             ),
           ).to.be.equal(false)
         })
       })
 
       describe('Multiple Users Roles', async () => {
-        const supportMultipleUsers = nftMetadata.roles.find(
-          (role: any) => role.name === 'PROPERTY_TENANT',
-        )?.supportsMultipleAssignments
-
         it('should return true for all users', async () => {
           expect(
-            await RolesRegistry.hasRole(
-              PROPERTY_TENANT,
-              roleCreator.address,
-              userOne.address,
-              AddressZero,
-              tokenId,
-              supportMultipleUsers,
-            ),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userOne.address),
           ).to.be.equal(true)
 
           expect(
-            await RolesRegistry.hasRole(
-              PROPERTY_TENANT,
-              roleCreator.address,
-              userTwo.address,
-              AddressZero,
-              tokenId,
-              supportMultipleUsers,
-            ),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userTwo.address),
           ).to.be.equal(true)
         })
         it("should NOT return true for all users if role is expired'", async () => {
@@ -246,25 +221,11 @@ describe('RolesRegistry', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await RolesRegistry.hasRole(
-              PROPERTY_TENANT,
-              roleCreator.address,
-              userOne.address,
-              AddressZero,
-              tokenId,
-              supportMultipleUsers,
-            ),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userOne.address),
           ).to.be.equal(false)
 
           expect(
-            await RolesRegistry.hasRole(
-              PROPERTY_TENANT,
-              roleCreator.address,
-              userTwo.address,
-              AddressZero,
-              tokenId,
-              supportMultipleUsers,
-            ),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userTwo.address),
           ).to.be.equal(false)
         })
       })
