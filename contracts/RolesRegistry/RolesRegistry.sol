@@ -6,7 +6,7 @@ import { IERC7432 } from "./interfaces/IERC7432.sol";
 
 contract RolesRegistry is IERC7432 {
 
-     // grantor => grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
+    // grantor => grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
     mapping(address => mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => RoleData)))))
         public roleAssignments;
 
