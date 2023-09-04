@@ -50,12 +50,12 @@ interface IERC7432 is IERC165 {
     /// @param _grantor The role creator.
     /// @param _operator The user that can grant the role.
     /// @param _tokenAddress The token address.
-    /// @param _approved The approval status.
+    /// @param _isApproved The approval status.
     event ApprovalForAll(
         address indexed _grantor,
         address indexed _operator,
         address indexed _tokenAddress,
-        bool _approved
+        bool _isApproved
     );
 
     /// @notice Emitted when an operator is approved to grant a role to another user.
@@ -63,13 +63,13 @@ interface IERC7432 is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
-    /// @param _approved The approval status.
+    /// @param _isApproved The approval status.
     event Approval(
         address indexed _grantor,
         address indexed _tokenAddress,
         uint256 indexed _tokenId,
         address  _operator,
-        bool _approved
+        bool _isApproved
     );
 
     /// @notice Grants a role to a user.
@@ -203,10 +203,32 @@ interface IERC7432 is IERC165 {
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
     /// @param _approved The approval status.
-    function setApproved(
+    function approve(
         address _tokenAddress,
         uint256 _tokenId,
         address _operator,
         bool _approved
     ) external;
+
+    /// @notice Checks if a user is approved to grant a role to another user.
+    /// @param _grantor The user that approved the operator.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @param _operator The user that can grant the role.
+    function getApproved(
+        address _grantor,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _operator
+    ) external view returns (bool);
+
+    /// @notice Checks if a user is approved to grant a role to another user.
+    /// @param _grantor The user that approved the operator.
+    /// @param _operator The user that can grant the role.
+    /// @param _tokenAddress The token address.
+    function isApprovedForAll(
+        address _grantor,
+        address _operator,
+        address _tokenAddress
+    ) external view returns (bool);
 }

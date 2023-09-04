@@ -13,11 +13,11 @@ contract RolesRegistry is IERC7432 {
     // grantor => tokenAddress => tokenId => role => grantee
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => address)))) public lastRoleAssignment;
 
-    // grantor => tokenAddress => tokenId => operator => approved
-    mapping(address => mapping(address => mapping(uint256 => mapping(address => bool)))) public approved;
+    // grantor => tokenAddress => tokenId => operator => isApproved
+    mapping(address => mapping(address => mapping(uint256 => mapping(address => bool)))) public tokenApprovals;
 
-    // grantor => tokenAddress => operator => approvedForAll
-    mapping(address => mapping( address => mapping(address => bool))) public approvedForAll;
+    // grantor => tokenAddress => operator => operatorApprovals
+    mapping(address => mapping( address => mapping(address => bool))) public operatorApprovals;
 
 
     modifier validExpirationDate(uint64 _expirationDate) {
@@ -110,7 +110,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bytes calldata _data
     ) external override validExpirationDate(_expirationDate) {
-        require(approved[_grantor][_tokenAddress][_tokenId][msg.sender] || approvedForAll[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be approved");
+        require(tokenApprovals[_grantor][_tokenAddress][_tokenId][msg.sender] || operatorApprovals[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be tokenApprovals");
 
         roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data);
         lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role] = _grantee;
@@ -130,7 +130,7 @@ contract RolesRegistry is IERC7432 {
         address _grantor,
         address _grantee
     ) external override {
-        require(approved[_grantor][_tokenAddress][_tokenId][msg.sender] || approvedForAll[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be approved");
+        require(tokenApprovals[_grantor][_tokenAddress][_tokenId][msg.sender] || operatorApprovals[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be approved");
         
         delete roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role];
         delete lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role];
@@ -140,14 +140,14 @@ contract RolesRegistry is IERC7432 {
     /// @notice Sets the approval for a user to grant a role to another user.
     /// @param _operator The user that can grant the role.
     /// @param _tokenAddress The token address.
-    /// @param _approved The approval status.
+    /// @param _isApproved The approval status.
     function setApprovalForAll(
         address _operator,
         address _tokenAddress,
-        bool _approved
+        bool _isApproved
     ) external override {
-        approvedForAll[msg.sender][_tokenAddress][_operator] = _approved;
-        emit ApprovalForAll(msg.sender, _tokenAddress, _operator, _approved);
+        operatorApprovals[msg.sender][_tokenAddress][_operator] = _isApproved;
+        emit ApprovalForAll(msg.sender, _tokenAddress, _operator, _isApproved);
     }
 
     /// @notice Sets the approval for a user to grant a role to another user.
@@ -155,13 +155,39 @@ contract RolesRegistry is IERC7432 {
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
     /// @param _approved The approval status.
-    function setApproved(
+    function approve(
         address _tokenAddress,
         uint256 _tokenId,
         address _operator,
         bool _approved
     ) external override {
-        approved[msg.sender][_tokenAddress][_tokenId][_operator] = _approved;
+        tokenApprovals[msg.sender][_tokenAddress][_tokenId][_operator] = _approved;
         emit Approval(msg.sender, _tokenAddress, _tokenId, _operator, _approved);
+    }
+
+    /// @notice Checks if a user is tokenApprovals to grant a role to another user.
+    /// @param _grantor The user that tokenApprovals the operator.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @param _operator The user that can grant the role.
+    function getApproved(
+        address _grantor,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _operator
+    ) external view override returns (bool) {
+        return tokenApprovals[_grantor][_tokenAddress][_tokenId][_operator];
+    }
+
+    /// @notice Checks if a user is tokenApprovals to grant a role to another user.
+    /// @param _grantor The user that tokenApprovals the operator.
+    /// @param _operator The user that can grant the role.
+    /// @param _tokenAddress The token address.
+    function isApprovedForAll(
+        address _grantor,
+        address _operator,
+        address _tokenAddress
+    ) external view override returns (bool) {
+        return operatorApprovals[_grantor][_tokenAddress][_operator];
     }
 }
