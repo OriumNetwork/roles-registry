@@ -110,7 +110,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bytes calldata _data
     ) external override validExpirationDate(_expirationDate) {
-        require(tokenApprovals[_grantor][_tokenAddress][_tokenId][msg.sender] || operatorApprovals[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be tokenApprovals");
+        require(tokenApprovals[_grantor][_tokenAddress][_tokenId][msg.sender] || operatorApprovals[_grantor][_tokenAddress][msg.sender], "RolesRegistry: sender must be approved");
 
         roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data);
         lastRoleAssignment[_grantor][_tokenAddress][_tokenId][_role] = _grantee;
