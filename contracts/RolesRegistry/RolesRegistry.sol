@@ -3,6 +3,7 @@
 pragma solidity 0.8.9;
 
 import { IERC7432 } from "./interfaces/IERC7432.sol";
+import "hardhat/console.sol";
 
 contract RolesRegistry is IERC7432 {
 
@@ -33,6 +34,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bytes calldata _data
     ) external validExpirationDate(_expirationDate) {
+        console.logBytes4(type(IERC7432).interfaceId);
         roleAssignments[msg.sender][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data);
         lastRoleAssignment[msg.sender][_tokenAddress][_tokenId][_role] = _grantee;
         emit RoleGranted(msg.sender, _role, _tokenAddress, _tokenId, _grantee, _expirationDate, _data);
