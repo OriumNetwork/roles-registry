@@ -25,10 +25,10 @@ interface IERC7432 is IERC165 {
     event RoleGranted(
         address indexed _grantor,
         bytes32 indexed _role,
-        address _tokenAddress,
-        uint256 indexed _tokenId,
+        address indexed _tokenAddress,
+        uint256 _tokenId,
         address _grantee,
-        uint64  _expirationDate,
+        uint64 _expirationDate,
         bytes _data
     );
 
@@ -41,8 +41,8 @@ interface IERC7432 is IERC165 {
     event RoleRevoked(
         address indexed _revoker,
         bytes32 indexed _role,
-        address _tokenAddress,
-        uint256 indexed _tokenId,
+        address indexed _tokenAddress,
+        uint256 _tokenId,
         address _grantee
     );
 
@@ -68,7 +68,7 @@ interface IERC7432 is IERC165 {
         address indexed _grantor,
         address indexed _tokenAddress,
         uint256 indexed _tokenId,
-        address  _operator,
+        address _operator,
         bool _isApproved
     );
 
@@ -156,11 +156,11 @@ interface IERC7432 is IERC165 {
         address _grantee
     ) external view returns (uint64 expirationDate_);
 
-    /// @notice Grants a role to a user from a role assignment.
+    /// @notice Grants a role on behalf of a specified user.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
-    /// @param _grantor The role creator.
+    /// @param _grantor The user assigning the role.
     /// @param _grantee The user that receives the role assignment.
     /// @param _expirationDate The expiration date of the role assignment.
     /// @param _data Any additional data about the role assignment.
@@ -174,11 +174,11 @@ interface IERC7432 is IERC165 {
         bytes calldata _data
     ) external;
 
-    /// @notice Revokes a role from a user.
+    /// @notice Revokes a role on behalf of an user.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
-    /// @param _grantor The role creator.
+    /// @param _grantor The user assigning the role.
     /// @param _grantee The user that receives the role revocation.
     function revokeRoleFrom(
         bytes32 _role,
@@ -188,45 +188,42 @@ interface IERC7432 is IERC165 {
         address _grantee
     ) external;
 
-    /// @notice Sets the approval for a user to grant a role to another user.
-    /// @param _operator The user that can grant the role.
+     /// @notice Approves user to grant and revoke any roles on behalf of the user.
+    /// @param _operator The approved user.
     /// @param _tokenAddress The token address.
     /// @param _approved The approval status.
-    function setApprovalForAll(
+    function setRoleApprovalForAll(
         address _operator,
         address _tokenAddress,
         bool _approved
     ) external;
-
-    /// @notice Sets the approval for a user to grant a role to another user.
+    /// @notice Approves user to grant and revoke any roles on behalf of the user.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
     /// @param _approved The approval status.
-    function approve(
+    function approveRole(
         address _tokenAddress,
         uint256 _tokenId,
         address _operator,
         bool _approved
     ) external;
-
-    /// @notice Checks if a user is approved to grant a role to another user.
+    /// @notice Checks if a user is approved to grant a role on behalf of another user.
     /// @param _grantor The user that approved the operator.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
-    function getApproved(
+    function getApprovedRole(
         address _grantor,
         address _tokenAddress,
         uint256 _tokenId,
         address _operator
     ) external view returns (bool);
-
-    /// @notice Checks if a user is approved to grant a role to another user.
+    /// @notice Checks if a user is approved to grant any role on behalf of another user.
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant the role.
     /// @param _tokenAddress The token address.
-    function isApprovedForAll(
+    function isRoleApprovedForAll(
         address _grantor,
         address _operator,
         address _tokenAddress

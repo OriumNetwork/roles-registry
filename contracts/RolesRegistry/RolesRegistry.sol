@@ -141,7 +141,7 @@ contract RolesRegistry is IERC7432 {
     /// @param _operator The user that can grant the role.
     /// @param _tokenAddress The token address.
     /// @param _isApproved The approval status.
-    function setApprovalForAll(
+    function setRoleApprovalForAll(
         address _operator,
         address _tokenAddress,
         bool _isApproved
@@ -155,7 +155,7 @@ contract RolesRegistry is IERC7432 {
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
     /// @param _approved The approval status.
-    function approve(
+    function approveRole(
         address _tokenAddress,
         uint256 _tokenId,
         address _operator,
@@ -170,7 +170,7 @@ contract RolesRegistry is IERC7432 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _operator The user that can grant the role.
-    function getApproved(
+    function getApprovedRole(
         address _grantor,
         address _tokenAddress,
         uint256 _tokenId,
@@ -183,7 +183,7 @@ contract RolesRegistry is IERC7432 {
     /// @param _grantor The user that tokenApprovals the operator.
     /// @param _operator The user that can grant the role.
     /// @param _tokenAddress The token address.
-    function isApprovedForAll(
+    function isRoleApprovedForAll(
         address _grantor,
         address _operator,
         address _tokenAddress
