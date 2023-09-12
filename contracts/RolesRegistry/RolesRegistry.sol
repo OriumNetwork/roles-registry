@@ -3,7 +3,6 @@
 pragma solidity 0.8.9;
 
 import { ERC7432 } from "./ERC7432.sol";
-import "hardhat/console.sol";
 
 contract RolesRegistry is ERC7432 {
 
