@@ -17,7 +17,7 @@ describe('RolesRegistry', () => {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let deployer: SignerWithAddress
-  let roleCreator: SignerWithAddress
+  let grantor: SignerWithAddress
   let userOne: SignerWithAddress
   let userTwo: SignerWithAddress
 
@@ -28,7 +28,7 @@ describe('RolesRegistry', () => {
 
   before(async function () {
     // prettier-ignore
-    [deployer, roleCreator, userOne, userTwo] = await ethers.getSigners()
+    [deployer, grantor, userOne, userTwo] = await ethers.getSigners()
 
     const metadata: NftMetadata = {
       name: 'Nft name',
@@ -99,7 +99,7 @@ describe('RolesRegistry', () => {
     describe('Grant role', async () => {
       it('should grant role', async () => {
         await expect(
-          RolesRegistry.connect(roleCreator).grantRole(
+          RolesRegistry.connect(grantor).grantRole(
             PROPERTY_MANAGER,
             AddressZero,
             tokenId,
@@ -109,7 +109,7 @@ describe('RolesRegistry', () => {
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, data)
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address, expirationDate, data)
       })
       it('should NOT grant role if expiration date is in the past', async () => {
         const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -117,7 +117,7 @@ describe('RolesRegistry', () => {
         const expirationDateInThePast = block.timestamp - ONE_DAY
 
         await expect(
-          RolesRegistry.connect(roleCreator).grantRole(
+          RolesRegistry.connect(grantor).grantRole(
             PROPERTY_MANAGER,
             AddressZero,
             tokenId,
@@ -125,24 +125,22 @@ describe('RolesRegistry', () => {
             expirationDateInThePast,
             HashZero,
           ),
-        ).to.be.revertedWith('RolesRegistry: expiration date must be in the future')
+        ).to.be.revertedWith('ERC7432: expiration date must be in the future')
       })
     })
 
     describe('Revoke role', async () => {
       it('should revoke role', async () => {
-        await expect(
-          RolesRegistry.connect(roleCreator).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address),
-        )
+        await expect(RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address))
           .to.emit(RolesRegistry, 'RoleRevoked')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address)
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
       })
     })
 
     describe('Has role', async () => {
       beforeEach(async () => {
         await expect(
-          RolesRegistry.connect(roleCreator).grantRole(
+          RolesRegistry.connect(grantor).grantRole(
             PROPERTY_MANAGER,
             AddressZero,
             tokenId,
@@ -152,10 +150,10 @@ describe('RolesRegistry', () => {
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, HashZero)
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address, expirationDate, HashZero)
 
         await expect(
-          RolesRegistry.connect(roleCreator).grantRole(
+          RolesRegistry.connect(grantor).grantRole(
             PROPERTY_MANAGER,
             AddressZero,
             tokenId,
@@ -165,29 +163,17 @@ describe('RolesRegistry', () => {
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userTwo.address, expirationDate, HashZero)
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userTwo.address, expirationDate, HashZero)
       })
 
       describe('Single User Roles', async () => {
         it('should return true for the last user granted, and false for the others', async () => {
           expect(
-            await RolesRegistry.hasUniqueRole(
-              PROPERTY_MANAGER,
-              AddressZero,
-              tokenId,
-              roleCreator.address,
-              userOne.address,
-            ),
+            await RolesRegistry.hasUniqueRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
           ).to.be.equal(false)
 
           expect(
-            await RolesRegistry.hasUniqueRole(
-              PROPERTY_MANAGER,
-              AddressZero,
-              tokenId,
-              roleCreator.address,
-              userTwo.address,
-            ),
+            await RolesRegistry.hasUniqueRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userTwo.address),
           ).to.be.equal(true)
         })
         it('should NOT return true for the last user if role is expired', async () => {
@@ -195,13 +181,7 @@ describe('RolesRegistry', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await RolesRegistry.hasUniqueRole(
-              PROPERTY_MANAGER,
-              AddressZero,
-              tokenId,
-              roleCreator.address,
-              userOne.address,
-            ),
+            await RolesRegistry.hasUniqueRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
           ).to.be.equal(false)
         })
       })
@@ -209,11 +189,11 @@ describe('RolesRegistry', () => {
       describe('Multiple Users Roles', async () => {
         it('should return true for all users', async () => {
           expect(
-            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userOne.address),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
           ).to.be.equal(true)
 
           expect(
-            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userTwo.address),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userTwo.address),
           ).to.be.equal(true)
         })
         it("should NOT return true for all users if role is expired'", async () => {
@@ -221,11 +201,11 @@ describe('RolesRegistry', () => {
           await hre.ethers.provider.send('evm_mine', [])
 
           expect(
-            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userOne.address),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
           ).to.be.equal(false)
 
           expect(
-            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, roleCreator.address, userTwo.address),
+            await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userTwo.address),
           ).to.be.equal(false)
         })
       })
@@ -247,7 +227,7 @@ describe('RolesRegistry', () => {
         const customData = defaultAbiCoder.encode(['(uint256 eventId,uint256[] split)[]'], [profitSplit])
 
         await expect(
-          RolesRegistry.connect(roleCreator).grantRole(
+          RolesRegistry.connect(grantor).grantRole(
             PROPERTY_MANAGER,
             AddressZero,
             tokenId,
@@ -257,13 +237,21 @@ describe('RolesRegistry', () => {
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address, expirationDate, customData)
+          .withArgs(
+            PROPERTY_MANAGER,
+            AddressZero,
+            tokenId,
+            grantor.address,
+            userOne.address,
+            expirationDate,
+            customData,
+          )
 
         const returnedData = await RolesRegistry.roleData(
           PROPERTY_MANAGER,
           AddressZero,
           tokenId,
-          roleCreator.address,
+          grantor.address,
           userOne.address,
         )
 
@@ -271,7 +259,7 @@ describe('RolesRegistry', () => {
           PROPERTY_MANAGER,
           AddressZero,
           tokenId,
-          roleCreator.address,
+          grantor.address,
           userOne.address,
         )
 
@@ -296,7 +284,7 @@ describe('RolesRegistry', () => {
         const rentalCost = ethers.utils.parseEther('1.5')
         const customData = defaultAbiCoder.encode(['uint256'], [rentalCost])
 
-        await RolesRegistry.connect(roleCreator).grantRole(
+        await RolesRegistry.connect(grantor).grantRole(
           PROPERTY_TENANT,
           AddressZero,
           tokenId,
@@ -309,7 +297,7 @@ describe('RolesRegistry', () => {
           PROPERTY_TENANT,
           AddressZero,
           tokenId,
-          roleCreator.address,
+          grantor.address,
           userOne.address,
         )
 
