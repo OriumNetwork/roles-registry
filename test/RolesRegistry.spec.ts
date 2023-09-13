@@ -125,7 +125,7 @@ describe('RolesRegistry', () => {
             expirationDateInThePast,
             HashZero,
           ),
-        ).to.be.revertedWith('ERC7432: expiration date must be in the future')
+        ).to.be.revertedWith('RolesRegistry: expiration date must be in the future')
       })
     })
 
