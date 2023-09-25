@@ -37,8 +37,8 @@ contract RolesRegistry is IERC7432 {
         _;
     }
 
-    modifier onlyTokenOwner(address _tokenAddress, uint256 _tokenId) {
-        require(_isOwner(_tokenAddress, _tokenId, msg.sender), "RolesRegistry: sender must be token owner");
+    modifier onlyTokenOwner(address _tokenAddress, uint256 _tokenId, address _account) {
+        require(_isOwner(_tokenAddress, _tokenId, _account), "RolesRegistry: account must be token owner");
         _;
     }
 
@@ -50,7 +50,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external onlyTokenOwner(_tokenAddress, _tokenId) {
+    ) external onlyTokenOwner(_tokenAddress, _tokenId, msg.sender) {
         _grantRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, _expirationDate, _revocable, _data);
     }
 
@@ -63,8 +63,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external override onlyApproved(_tokenAddress, _tokenId, _grantor) {
-        require(_isOwner(_tokenAddress, _tokenId, _grantor), "RolesRegistry: account must be owner");
+    ) external override  onlyTokenOwner(_tokenAddress, _tokenId, _grantor) onlyApproved(_tokenAddress, _tokenId, _grantor) {
         _grantRole(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
@@ -78,7 +77,7 @@ contract RolesRegistry is IERC7432 {
         bool _revocable,
         bytes calldata _data
     ) internal validExpirationDate(_expirationDate) {
-        // TODO: How to handle the case where the role is already granted and not expired ?
+        // TODO: [Part3] How to handle the case where the role is already granted and not expired ?
         roleAssignments[_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _revocable, _data);
         latestGrantees[_tokenAddress][_tokenId][_role] = _grantee;
         emit RoleGranted(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
@@ -89,7 +88,7 @@ contract RolesRegistry is IERC7432 {
         address _tokenAddress,
         uint256 _tokenId,
         address _grantee
-    ) external onlyTokenOwner(_tokenAddress, _tokenId) {
+    ) external onlyTokenOwner(_tokenAddress, _tokenId, msg.sender) {
         _revokeRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, msg.sender);
     }
 
@@ -99,8 +98,7 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _revoker,
         address _grantee
-    ) external override {
-        require(_isOwner(_tokenAddress, _tokenId, _revoker), "RolesRegistry: revoker must be token owner");
+    ) external override onlyTokenOwner(_tokenAddress, _tokenId, _revoker) {
         address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
         _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
     }

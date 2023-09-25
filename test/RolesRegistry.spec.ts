@@ -142,6 +142,19 @@ describe('RolesRegistry', () => {
           ),
         ).to.be.revertedWith('RolesRegistry: expiration date must be in the future')
       })
+      it('should NOT grant role if caller is not the token owner', async () => {
+        await expect(
+          RolesRegistry.connect(userOne).grantRole(
+            PROPERTY_MANAGER,
+            mockERC721.address,
+            tokenId,
+            userOne.address,
+            expirationDate,
+            revocable,
+            HashZero,
+          ),
+        ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
+      })
     })
 
     describe('Revoke role', async () => {
@@ -202,6 +215,11 @@ describe('RolesRegistry', () => {
         await expect(
           RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, mockERC721.address, tokenId, userOne.address),
         ).to.be.revertedWith(`RolesRegistry: Role is not revocable or caller is not the grantee`)
+      })
+      it('should NOT revoke role if caller is not the token owner', async () => {
+        await expect(
+          RolesRegistry.connect(userOne).revokeRole(PROPERTY_MANAGER, mockERC721.address, tokenId, userOne.address),
+        ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
       })
     })
 
@@ -493,6 +511,21 @@ describe('RolesRegistry', () => {
                 ),
               ).to.be.revertedWith('RolesRegistry: sender must be approved')
             })
+            it('should NOT grant role from if grantor is not the token owner', async () => {
+              await mockERC721.connect(grantor).transferFrom(grantor.address, userOne.address, tokenId)
+              await expect(
+                RolesRegistry.connect(operator).grantRoleFrom(
+                  PROPERTY_MANAGER,
+                  mockERC721.address,
+                  tokenId,
+                  grantor.address,
+                  userOne.address,
+                  expirationDate,
+                  revocable,
+                  HashZero,
+                ),
+              ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
+            })
           })
 
           describe('Revoke role from', async () => {
@@ -521,26 +554,6 @@ describe('RolesRegistry', () => {
                 )
                   .to.emit(RolesRegistry, 'RoleRevoked')
                   .withArgs(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userOne.address)
-              })
-              it('should NOT revoke role from if operator is not approved', async () => {
-                if (approval === 'Approval for TokenId') {
-                  await RolesRegistry.connect(grantor).approveRole(mockERC721.address, tokenId, operator.address, false)
-                } else {
-                  await RolesRegistry.connect(grantor).setRoleApprovalForAll(
-                    mockERC721.address,
-                    operator.address,
-                    false,
-                  )
-                }
-                await expect(
-                  RolesRegistry.connect(operator).revokeRoleFrom(
-                    PROPERTY_MANAGER,
-                    mockERC721.address,
-                    tokenId,
-                    grantor.address,
-                    userOne.address,
-                  ),
-                ).to.be.revertedWith('RolesRegistry: sender must be approved')
               })
               it('should revoke role from if operator is only approved by grantee', async () => {
                 await RolesRegistry.connect(grantor).approveRole(mockERC721.address, tokenId, operator.address, false)
@@ -640,6 +653,38 @@ describe('RolesRegistry', () => {
                   ),
                 ).to.be.equal(false)
               })
+              it('should NOT revoke role from if operator is not approved', async () => {
+                if (approval === 'Approval for TokenId') {
+                  await RolesRegistry.connect(grantor).approveRole(mockERC721.address, tokenId, operator.address, false)
+                } else {
+                  await RolesRegistry.connect(grantor).setRoleApprovalForAll(
+                    mockERC721.address,
+                    operator.address,
+                    false,
+                  )
+                }
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    mockERC721.address,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                ).to.be.revertedWith('RolesRegistry: sender must be approved')
+              })
+              it('should NOT revoke role from if revoker is not the token owner', async () => {
+                await mockERC721.connect(grantor).transferFrom(grantor.address, userOne.address, tokenId)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    mockERC721.address,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
+              })
             })
             describe('Non-Revocable roles', async () => {
               beforeEach(async () => {
@@ -738,7 +783,7 @@ describe('RolesRegistry', () => {
       }
     })
 
-    describe.only('Transfers', async function () {
+    describe('Transfers', async function () {
       beforeEach(async function () {
         await RolesRegistry.connect(grantor).grantRole(
           PROPERTY_MANAGER,
@@ -778,7 +823,7 @@ describe('RolesRegistry', () => {
             grantor.address,
             userTwo.address,
           ),
-        ).to.be.revertedWith(`RolesRegistry: revoker must be token owner`)
+        ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
       })
       it('Should revoke role from if operator is approved by grantee', async () => {
         await RolesRegistry.connect(userTwo).approveRole(mockERC721.address, tokenId, userOne.address, true)
