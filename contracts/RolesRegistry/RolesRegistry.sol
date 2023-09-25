@@ -236,7 +236,7 @@ contract RolesRegistry is IERC7432 {
         } else if (_isERC721(_tokenAddress)) {
             return _account == IERC721(_tokenAddress).ownerOf(_tokenId);
         } else {
-            revert("OriumMarketplace: token address is not ERC1155 or ERC721");
+            revert("RolesRegistry: token address is not ERC1155 or ERC721");
         }
     }
 }
