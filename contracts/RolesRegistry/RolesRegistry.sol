@@ -15,7 +15,7 @@ contract RolesRegistry is IERC7432 {
     // grantor => tokenAddress => tokenId => operator => isApproved
     mapping(address => mapping(address => mapping(uint256 => mapping(address => bool)))) public tokenIdApprovals;
 
-    // grantor =>  tokenAddress => operator => isApproved
+    // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
     modifier validExpirationDate(uint64 _expirationDate) {
@@ -23,14 +23,9 @@ contract RolesRegistry is IERC7432 {
         _;
     }
 
-    modifier onlyApproved(
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _grantor
-    ) {
+    modifier onlyApproved(address _tokenAddress, uint256 _tokenId, address _account) {
         require(
-            isRoleApprovedForAll(_tokenAddress, _grantor, msg.sender) ||
-                getApprovedRole(_tokenAddress, _tokenId, _grantor, msg.sender),
+            _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
             "RolesRegistry: sender must be approved"
         );
         _;
@@ -42,9 +37,10 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _grantee,
         uint64 _expirationDate,
+        bool _revocable,
         bytes calldata _data
     ) external {
-        _grantRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, _expirationDate, _data);
+        _grantRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, _expirationDate, _revocable, _data);
     }
 
     function grantRoleFrom(
@@ -54,9 +50,10 @@ contract RolesRegistry is IERC7432 {
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
+        bool _revocable,
         bytes calldata _data
     ) external override onlyApproved(_tokenAddress, _tokenId, _grantor) {
-        _grantRole(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _data);
+        _grantRole(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
     function _grantRole(
@@ -66,15 +63,16 @@ contract RolesRegistry is IERC7432 {
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
+        bool _revocable,
         bytes calldata _data
     ) internal validExpirationDate(_expirationDate) {
-        roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _data);
+        roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _revocable, _data);
         latestGrantees[_grantor][_tokenAddress][_tokenId][_role] = _grantee;
-        emit RoleGranted(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _data);
+        emit RoleGranted(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
     function revokeRole(bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantee) external {
-        _revokeRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee);
+        _revokeRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, msg.sender);
     }
 
     function revokeRoleFrom(
@@ -83,8 +81,19 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _revoker,
         address _grantee
-    ) external override onlyApproved(_tokenAddress, _tokenId, _revoker) {
-        _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee);
+    ) external override {
+        address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
+        _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
+    }
+
+    function _getApprovedCaller(address _tokenAddress, uint256 _tokenId, address _revoker, address _grantee) internal view returns (address) {
+        if(_isRoleApproved(_tokenAddress, _tokenId, _grantee, msg.sender)){
+            return _grantee;
+        } else if(_isRoleApproved(_tokenAddress, _tokenId, _revoker, msg.sender)){
+            return _revoker;
+        } else {
+            revert("RolesRegistry: sender must be approved");
+        }
     }
 
     function _revokeRole(
@@ -92,8 +101,11 @@ contract RolesRegistry is IERC7432 {
         address _tokenAddress,
         uint256 _tokenId,
         address _revoker,
-        address _grantee
+        address _grantee,
+        address _caller
     ) internal {
+        bool _isRevocable = roleAssignments[_revoker][_grantee][_tokenAddress][_tokenId][_role].revocable;
+        require(_isRevocable || _caller == _grantee, "RolesRegistry: Role is not revocable or caller is not the grantee");
         delete roleAssignments[_revoker][_grantee][_tokenAddress][_tokenId][_role];
         delete latestGrantees[_revoker][_tokenAddress][_tokenId][_role];
         emit RoleRevoked(_role, _tokenAddress, _tokenId, _revoker, _grantee);
@@ -116,9 +128,7 @@ contract RolesRegistry is IERC7432 {
         address _grantor,
         address _grantee
     ) external view returns (bool) {
-        return
-            latestGrantees[_grantor][_tokenAddress][_tokenId][_role] == _grantee &&
-            roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
+        return latestGrantees[_grantor][_tokenAddress][_tokenId][_role] == _grantee && roleAssignments[_grantor][_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
     }
 
     function roleData(
@@ -147,12 +157,21 @@ contract RolesRegistry is IERC7432 {
         return interfaceId == type(IERC7432).interfaceId;
     }
 
-    function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
+    function setRoleApprovalForAll(
+        address _tokenAddress,
+        address _operator,
+        bool _isApproved
+    ) external override {
         tokenApprovals[msg.sender][_tokenAddress][_operator] = _isApproved;
         emit RoleApprovalForAll(_tokenAddress, _operator, _isApproved);
     }
 
-    function approveRole(address _tokenAddress, uint256 _tokenId, address _operator, bool _approved) external override {
+    function approveRole(
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _operator,
+        bool _approved
+    ) external override {
         tokenIdApprovals[msg.sender][_tokenAddress][_tokenId][_operator] = _approved;
         emit RoleApproval(_tokenAddress, _tokenId, _operator, _approved);
     }
@@ -172,5 +191,14 @@ contract RolesRegistry is IERC7432 {
         address _operator
     ) public view override returns (bool) {
         return tokenIdApprovals[_grantor][_tokenAddress][_tokenId][_operator];
+    }
+
+    function _isRoleApproved(
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantor,
+        address _operator
+    ) internal view returns (bool) {
+        return isRoleApprovedForAll(_tokenAddress, _grantor, _operator) || getApprovedRole(_tokenAddress, _tokenId, _grantor, _operator);
     }
 }

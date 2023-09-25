@@ -26,6 +26,7 @@ describe('RolesRegistry', () => {
   const PROPERTY_TENANT = solidityKeccak256(['string'], ['PROPERTY_TENANT'])
 
   const tokenId = 1
+  const revocable = true
 
   before(async function () {
     // prettier-ignore
@@ -74,8 +75,8 @@ describe('RolesRegistry', () => {
   })
 
   beforeEach(async () => {
-    const ERC7432Factory = await ethers.getContractFactory('RolesRegistry')
-    RolesRegistry = await ERC7432Factory.deploy()
+    const RolesRegistryFactory = await ethers.getContractFactory('RolesRegistry')
+    RolesRegistry = await RolesRegistryFactory.deploy()
 
     const NftFactory = await ethers.getContractFactory('Nft')
     nft = await NftFactory.deploy()
@@ -106,11 +107,21 @@ describe('RolesRegistry', () => {
             tokenId,
             userOne.address,
             expirationDate,
+            revocable,
             data,
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address, expirationDate, data)
+          .withArgs(
+            PROPERTY_MANAGER,
+            AddressZero,
+            tokenId,
+            grantor.address,
+            userOne.address,
+            expirationDate,
+            revocable,
+            data,
+          )
       })
       it('should NOT grant role if expiration date is in the past', async () => {
         const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -124,6 +135,7 @@ describe('RolesRegistry', () => {
             tokenId,
             userOne.address,
             expirationDateInThePast,
+            revocable,
             HashZero,
           ),
         ).to.be.revertedWith('RolesRegistry: expiration date must be in the future')
@@ -131,10 +143,57 @@ describe('RolesRegistry', () => {
     })
 
     describe('Revoke role', async () => {
+      beforeEach(async () => {
+        await RolesRegistry.connect(grantor).grantRole(
+          PROPERTY_MANAGER,
+          AddressZero,
+          tokenId,
+          userOne.address,
+          expirationDate,
+          revocable,
+          data,
+        )
+      })
       it('should revoke role', async () => {
         await expect(RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address))
           .to.emit(RolesRegistry, 'RoleRevoked')
           .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+      })
+      it('should revoke role if caller is the grantee', async () => {
+        await expect(RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address))
+          .to.emit(RolesRegistry, 'RoleRevoked')
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+      })
+      it('should revoke role if role is not revocable, but grantor is also the grantee', async () => {
+        await RolesRegistry.connect(grantor).grantRole(
+          PROPERTY_MANAGER,
+          AddressZero,
+          tokenId,
+          grantor.address,
+          expirationDate,
+          false,
+          data,
+        )
+        await expect(RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address))
+          .to.emit(RolesRegistry, 'RoleRevoked')
+          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, grantor.address)
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, grantor.address),
+        ).to.be.equal(false)
+      })
+      it('should NOT revoke role if role is not revocable', async () => {
+        await RolesRegistry.connect(grantor).grantRole(
+          PROPERTY_MANAGER,
+          AddressZero,
+          tokenId,
+          userOne.address,
+          expirationDate,
+          false,
+          data,
+        )
+        await expect(
+          RolesRegistry.connect(grantor).revokeRole(PROPERTY_MANAGER, AddressZero, tokenId, userOne.address),
+        ).to.be.revertedWith(`RolesRegistry: Role is not revocable or caller is not the grantee`)
       })
     })
 
@@ -147,11 +206,21 @@ describe('RolesRegistry', () => {
             tokenId,
             userOne.address,
             expirationDate,
+            revocable,
             HashZero,
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address, expirationDate, HashZero)
+          .withArgs(
+            PROPERTY_MANAGER,
+            AddressZero,
+            tokenId,
+            grantor.address,
+            userOne.address,
+            expirationDate,
+            revocable,
+            HashZero,
+          )
 
         await expect(
           RolesRegistry.connect(grantor).grantRole(
@@ -160,11 +229,21 @@ describe('RolesRegistry', () => {
             tokenId,
             userTwo.address,
             expirationDate,
+            revocable,
             HashZero,
           ),
         )
           .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userTwo.address, expirationDate, HashZero)
+          .withArgs(
+            PROPERTY_MANAGER,
+            AddressZero,
+            tokenId,
+            grantor.address,
+            userTwo.address,
+            expirationDate,
+            revocable,
+            HashZero,
+          )
       })
 
       describe('Unique Roles', async () => {
@@ -234,6 +313,7 @@ describe('RolesRegistry', () => {
             tokenId,
             userOne.address,
             expirationDate,
+            revocable,
             customData,
           ),
         )
@@ -245,6 +325,7 @@ describe('RolesRegistry', () => {
             grantor.address,
             userOne.address,
             expirationDate,
+            revocable,
             customData,
           )
 
@@ -291,6 +372,7 @@ describe('RolesRegistry', () => {
           tokenId,
           userOne.address,
           expirationDate,
+          revocable,
           customData,
         )
 
@@ -303,7 +385,7 @@ describe('RolesRegistry', () => {
         )
 
         const tenantRole = nftMetadata.roles.find((role: Role) => role.name === 'PROPERTY_TENANT')
-        const decodedData = defaultAbiCoder.decode([`${tenantRole?.inputs.map(input => input.type)}`], returnedData)
+        const decodedData = defaultAbiCoder.decode([`${tenantRole!.inputs.map(input => input.type)}`], returnedData)
 
         expect(returnedData).to.equal(customData)
         expect(decodedData[0]).to.deep.equal(rentalCost)
@@ -337,6 +419,7 @@ describe('RolesRegistry', () => {
                   grantor.address,
                   userOne.address,
                   expirationDate,
+                  revocable,
                   HashZero,
                 ),
               )
@@ -348,6 +431,7 @@ describe('RolesRegistry', () => {
                   grantor.address,
                   userOne.address,
                   expirationDate,
+                  revocable,
                   HashZero,
                 )
             })
@@ -366,6 +450,7 @@ describe('RolesRegistry', () => {
                   grantor.address,
                   userOne.address,
                   expirationDate,
+                  revocable,
                   HashZero,
                 ),
               ).to.be.revertedWith('RolesRegistry: sender must be approved')
@@ -373,34 +458,178 @@ describe('RolesRegistry', () => {
           })
 
           describe('Revoke role from', async () => {
-            it('should revoke role from', async () => {
-              await expect(
-                RolesRegistry.connect(operator).revokeRoleFrom(
+            describe('Revocable roles', async () => {
+              beforeEach(async () => {
+                await RolesRegistry.connect(operator).grantRoleFrom(
                   PROPERTY_MANAGER,
                   AddressZero,
                   tokenId,
                   grantor.address,
                   userOne.address,
-                ),
-              )
-                .to.emit(RolesRegistry, 'RoleRevoked')
-                .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
-            })
-            it('should NOT revoke role from if operator is not approved', async () => {
-              if (approval === 'Approval for TokenId') {
+                  expirationDate,
+                  revocable,
+                  HashZero,
+                )
+              })
+              it('should revoke role from', async () => {
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+              })
+              it('should NOT revoke role from if operator is not approved', async () => {
+                if (approval === 'Approval for TokenId') {
+                  await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, false)
+                } else {
+                  await RolesRegistry.connect(grantor).setRoleApprovalForAll(AddressZero, operator.address, false)
+                }
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                ).to.be.revertedWith('RolesRegistry: sender must be approved')
+              })
+              it('should revoke role from if operator is only approved by grantee', async () => {
                 await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, false)
-              } else {
-                await RolesRegistry.connect(grantor).setRoleApprovalForAll(AddressZero, operator.address, false)
-              }
-              await expect(
-                RolesRegistry.connect(operator).revokeRoleFrom(
+                await RolesRegistry.connect(userOne).approveRole(AddressZero, tokenId, operator.address, true)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(false)
+              })
+              it('should revoke role from if operator is approved by both grantor and grantee', async () => {
+                await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, true)
+                await RolesRegistry.connect(userOne).approveRole(AddressZero, tokenId, operator.address, true)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(false)
+              })
+              it('should revoke role from if operator is only approved by grantor', async () => {
+                await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, true)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(false)
+              })
+            })
+            describe('Non-Revocable roles', async () => {
+              beforeEach(async () => {
+                await RolesRegistry.connect(operator).grantRoleFrom(
                   PROPERTY_MANAGER,
                   AddressZero,
                   tokenId,
                   grantor.address,
                   userOne.address,
-                ),
-              ).to.be.revertedWith('RolesRegistry: sender must be approved')
+                  expirationDate,
+                  !revocable,
+                  HashZero,
+                )
+              })
+              it('should revoke role from if operator is only approved by grantee', async () => {
+                await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, false)
+                await RolesRegistry.connect(userOne).approveRole(AddressZero, tokenId, operator.address, true)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(false)
+              })
+              it('should revoke role from if operator is approved by both grantor and grantee', async () => {
+                await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, true)
+                await RolesRegistry.connect(userOne).approveRole(AddressZero, tokenId, operator.address, true)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                )
+                  .to.emit(RolesRegistry, 'RoleRevoked')
+                  .withArgs(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address)
+                expect(
+                  await RolesRegistry.hasRole(PROPERTY_MANAGER, AddressZero, tokenId, grantor.address, userOne.address),
+                ).to.be.equal(false)
+              })
+              it('should NOT revoke role from if operator is only approved by grantor', async () => {
+                await RolesRegistry.connect(grantor).approveRole(AddressZero, tokenId, operator.address, true)
+                await expect(
+                  RolesRegistry.connect(operator).revokeRoleFrom(
+                    PROPERTY_MANAGER,
+                    AddressZero,
+                    tokenId,
+                    grantor.address,
+                    userOne.address,
+                  ),
+                ).to.be.revertedWith(`RolesRegistry: Role is not revocable or caller is not the grantee`)
+              })
             })
           })
         })
