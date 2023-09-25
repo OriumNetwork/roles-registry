@@ -8,7 +8,7 @@ import axios from 'axios'
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils'
 import { NftMetadata, Role } from './types'
 
-const { HashZero, AddressZero } = ethers.constants
+const { HashZero } = ethers.constants
 const ONE_DAY = 60 * 60 * 24
 
 describe('RolesRegistry', () => {
@@ -736,6 +736,70 @@ describe('RolesRegistry', () => {
           })
         })
       }
+    })
+
+    describe.only('Transfers', async function () {
+      beforeEach(async function () {
+        await RolesRegistry.connect(grantor).grantRole(
+          PROPERTY_MANAGER,
+          mockERC721.address,
+          tokenId,
+          userTwo.address,
+          expirationDate,
+          revocable,
+          HashZero,
+        )
+
+        await mockERC721.connect(grantor).transferFrom(grantor.address, userTwo.address, tokenId)
+      })
+      it('Should keep the role when transferring the NFT', async function () {
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userTwo.address),
+        ).to.be.equal(true)
+      })
+      it('Should revoke the role after transferring the NFT', async function () {
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userTwo.address),
+        ).to.be.equal(true)
+
+        await RolesRegistry.connect(userTwo).revokeRole(PROPERTY_MANAGER, mockERC721.address, tokenId, userTwo.address)
+
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userTwo.address),
+        ).to.be.equal(false)
+      })
+      it('Should NOT revoke role from if operator is only approved by previous NFT owner', async () => {
+        await RolesRegistry.connect(grantor).approveRole(mockERC721.address, tokenId, userOne.address, true)
+        await expect(
+          RolesRegistry.connect(userOne).revokeRoleFrom(
+            PROPERTY_MANAGER,
+            mockERC721.address,
+            tokenId,
+            grantor.address,
+            userTwo.address,
+          ),
+        ).to.be.revertedWith(`RolesRegistry: revoker must be token owner`)
+      })
+      it('Should revoke role from if operator is approved by grantee', async () => {
+        await RolesRegistry.connect(userTwo).approveRole(mockERC721.address, tokenId, userOne.address, true)
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userTwo.address),
+        ).to.be.equal(true)
+        await expect(
+          RolesRegistry.connect(userOne).revokeRoleFrom(
+            PROPERTY_MANAGER,
+            mockERC721.address,
+            tokenId,
+            userTwo.address,
+            userTwo.address,
+          ),
+        )
+          .to.emit(RolesRegistry, 'RoleRevoked')
+          .withArgs(PROPERTY_MANAGER, mockERC721.address, tokenId, userTwo.address, userTwo.address)
+        expect(
+          await RolesRegistry.hasRole(PROPERTY_MANAGER, mockERC721.address, tokenId, grantor.address, userTwo.address),
+        ).to.be.equal(false)
+      })
     })
   })
 })
