@@ -77,7 +77,15 @@ contract RolesRegistry is IERC7432 {
         bool _revocable,
         bytes calldata _data
     ) internal validExpirationDate(_expirationDate) {
-        // TODO: [Part3] How to handle the case where the role is already granted and not expired ?
+        address _lastGrantee = latestGrantees[_tokenAddress][_tokenId][_role];
+        RoleData memory _roleData = roleAssignments[_lastGrantee][_tokenAddress][_tokenId][_role];
+
+        bool _hasActiveAssignment = _roleData.expirationDate > block.timestamp;
+
+        if(_hasActiveAssignment) {
+            require(_roleData.revocable, "RolesRegistry: role is not revocable"); // means thats only revocable roles can be multiple assigned
+        }
+
         roleAssignments[_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _revocable, _data);
         latestGrantees[_tokenAddress][_tokenId][_role] = _grantee;
         emit RoleGranted(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
