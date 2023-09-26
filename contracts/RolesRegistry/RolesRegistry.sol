@@ -25,19 +25,24 @@ contract RolesRegistry is IERC7432 {
         _;
     }
 
-    modifier onlyApproved(
+    modifier onlyOwnerOrApproved(
         address _tokenAddress,
         uint256 _tokenId,
         address _account
     ) {
         require(
-            _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
-            "RolesRegistry: sender must be approved"
+            _isOwner(_tokenAddress, _tokenId, msg.sender) ||
+                _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
+            "RolesRegistry: sender must be token owner or approved"
         );
         _;
     }
 
-    modifier onlyTokenOwner(address _tokenAddress, uint256 _tokenId, address _account) {
+    modifier isTokenOwner(
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _account
+    ) {
         require(_isOwner(_tokenAddress, _tokenId, _account), "RolesRegistry: account must be token owner");
         _;
     }
@@ -50,7 +55,7 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external onlyTokenOwner(_tokenAddress, _tokenId, msg.sender) {
+    ) external isTokenOwner(_tokenAddress, _tokenId, msg.sender) {
         _grantRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, _expirationDate, _revocable, _data);
     }
 
@@ -63,7 +68,12 @@ contract RolesRegistry is IERC7432 {
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external override  onlyTokenOwner(_tokenAddress, _tokenId, _grantor) onlyApproved(_tokenAddress, _tokenId, _grantor) {
+    )
+        external
+        override
+        isTokenOwner(_tokenAddress, _tokenId, _grantor)
+        onlyOwnerOrApproved(_tokenAddress, _tokenId, _grantor)
+    {
         _grantRole(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
@@ -82,7 +92,7 @@ contract RolesRegistry is IERC7432 {
 
         bool _hasActiveAssignment = _roleData.expirationDate > block.timestamp;
 
-        if(_hasActiveAssignment) {
+        if (_hasActiveAssignment) {
             require(_roleData.revocable, "RolesRegistry: role is not revocable"); // means thats only revocable roles can be multiple assigned
         }
 
@@ -96,7 +106,7 @@ contract RolesRegistry is IERC7432 {
         address _tokenAddress,
         uint256 _tokenId,
         address _grantee
-    ) external onlyTokenOwner(_tokenAddress, _tokenId, msg.sender) {
+    ) external isTokenOwner(_tokenAddress, _tokenId, msg.sender) {
         _revokeRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, msg.sender);
     }
 
@@ -106,7 +116,7 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _revoker,
         address _grantee
-    ) external override onlyTokenOwner(_tokenAddress, _tokenId, _revoker) {
+    ) external override isTokenOwner(_tokenAddress, _tokenId, _revoker) {
         address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
         _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
     }
@@ -119,7 +129,7 @@ contract RolesRegistry is IERC7432 {
     ) internal view returns (address) {
         if (_isRoleApproved(_tokenAddress, _tokenId, _grantee, msg.sender)) {
             return _grantee;
-        } else if (_isRoleApproved(_tokenAddress, _tokenId, _revoker, msg.sender)) {
+        } else if (_isOwner(_tokenAddress, _tokenId, msg.sender) || _isRoleApproved(_tokenAddress, _tokenId, _revoker, msg.sender)) {
             return _revoker;
         } else {
             revert("RolesRegistry: sender must be approved");
@@ -135,7 +145,7 @@ contract RolesRegistry is IERC7432 {
         address _caller
     ) internal {
         require(
-           _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
+            _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
             "RolesRegistry: Role is not revocable or caller is not the grantee"
         );
         delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
@@ -233,17 +243,8 @@ contract RolesRegistry is IERC7432 {
         return ERC165Checker.supportsInterface(_tokenAddress, type(IERC1155).interfaceId);
     }
 
-    function _isERC721(address _tokenAddress) internal view returns (bool) {
-        return ERC165Checker.supportsInterface(_tokenAddress, type(IERC721).interfaceId);
-    }
-
     function _isOwner(address _tokenAddress, uint256 _tokenId, address _account) internal view returns (bool) {
-        if (_isERC1155(_tokenAddress)) {
-            return IERC1155(_tokenAddress).balanceOf(_account, _tokenId) > 0;
-        } else if (_isERC721(_tokenAddress)) {
-            return _account == IERC721(_tokenAddress).ownerOf(_tokenId);
-        } else {
-            revert("RolesRegistry: token address is not ERC1155 or ERC721");
-        }
+        if (_isERC1155(_tokenAddress)) return IERC1155(_tokenAddress).balanceOf(_account, _tokenId) > 0;
+        else return _account == IERC721(_tokenAddress).ownerOf(_tokenId); // Assuming that the token implements ERC721
     }
 }
