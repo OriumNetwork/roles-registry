@@ -134,9 +134,8 @@ contract RolesRegistry is IERC7432 {
         address _grantee,
         address _caller
     ) internal {
-        bool _isRevocable = roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable;
         require(
-            _isRevocable || _caller == _grantee,
+           _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
             "RolesRegistry: Role is not revocable or caller is not the grantee"
         );
         delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
