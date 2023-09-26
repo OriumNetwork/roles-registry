@@ -31,7 +31,7 @@ contract RolesRegistry is IERC7432 {
         address _account
     ) {
         require(
-            _isOwner(_tokenAddress, _tokenId, msg.sender) ||
+            msg.sender == IERC721(_tokenAddress).ownerOf(_tokenId) ||
             _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
             "RolesRegistry: sender must be token owner or approved"
         );
@@ -43,7 +43,7 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _account
     ) {
-        require(_isOwner(_tokenAddress, _tokenId, _account), "RolesRegistry: account must be token owner");
+        require(_account == IERC721(_tokenAddress).ownerOf(_tokenId), "RolesRegistry: account must be token owner");
         _;
     }
 
@@ -118,7 +118,7 @@ contract RolesRegistry is IERC7432 {
         address _revoker,
         address _grantee
     ) external override isTokenOwner(_tokenAddress, _tokenId, _revoker) {
-        address _caller = _isOwner(_tokenAddress, _tokenId, msg.sender) ? _revoker : _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
+        address _caller = msg.sender == IERC721(_tokenAddress).ownerOf(_tokenId) ? _revoker : _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
         _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
     }
 
@@ -238,14 +238,5 @@ contract RolesRegistry is IERC7432 {
         return
             isRoleApprovedForAll(_tokenAddress, _grantor, _operator) ||
             getApprovedRole(_tokenAddress, _tokenId, _grantor, _operator);
-    }
-
-    function _isERC1155(address _tokenAddress) internal view returns (bool) {
-        return ERC165Checker.supportsInterface(_tokenAddress, type(IERC1155).interfaceId);
-    }
-
-    function _isOwner(address _tokenAddress, uint256 _tokenId, address _account) internal view returns (bool) {
-        if (_isERC1155(_tokenAddress)) return IERC1155(_tokenAddress).balanceOf(_account, _tokenId) > 0;
-        else return _account == IERC721(_tokenAddress).ownerOf(_tokenId); // Assuming that the token implements ERC721
     }
 }
