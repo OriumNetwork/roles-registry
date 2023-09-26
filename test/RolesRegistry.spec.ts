@@ -155,19 +155,6 @@ describe('RolesRegistry', () => {
           ),
         ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
       })
-      it.skip('should NOT grant role if token is neither ERC721 nor ERC1155', async () => {
-        await expect(
-          RolesRegistry.connect(grantor).grantRole(
-            PROPERTY_MANAGER,
-            deployer.address,
-            tokenId,
-            userOne.address,
-            expirationDate,
-            revocable,
-            HashZero,
-          ),
-        ).to.be.revertedWith(`RolesRegistry: token address is not ERC1155 or ERC721`)
-      })
     })
 
     describe('Revoke role', async () => {
