@@ -93,7 +93,8 @@ contract RolesRegistry is IERC7432 {
         bool _hasActiveAssignment = _roleData.expirationDate > block.timestamp;
 
         if (_hasActiveAssignment) {
-            require(_roleData.revocable, "RolesRegistry: role is not revocable"); // means thats only revocable roles can be multiple assigned
+            // only unique roles can be revocable
+            require(_roleData.revocable, "RolesRegistry: role is not revocable");
         }
 
         roleAssignments[_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _revocable, _data);
@@ -117,7 +118,7 @@ contract RolesRegistry is IERC7432 {
         address _revoker,
         address _grantee
     ) external override isTokenOwner(_tokenAddress, _tokenId, _revoker) {
-        address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
+        address _caller = _isOwner(_tokenAddress, _tokenId, msg.sender) ? _revoker : _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
         _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
     }
 
@@ -129,7 +130,7 @@ contract RolesRegistry is IERC7432 {
     ) internal view returns (address) {
         if (_isRoleApproved(_tokenAddress, _tokenId, _grantee, msg.sender)) {
             return _grantee;
-        } else if (_isOwner(_tokenAddress, _tokenId, msg.sender) || _isRoleApproved(_tokenAddress, _tokenId, _revoker, msg.sender)) {
+        } else if (_isRoleApproved(_tokenAddress, _tokenId, _revoker, msg.sender)) {
             return _revoker;
         } else {
             revert("RolesRegistry: sender must be approved");
