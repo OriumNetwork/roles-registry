@@ -5,10 +5,10 @@ pragma solidity 0.8.9;
 import { ERC721 } from '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import { Strings } from '@openzeppelin/contracts/utils/Strings.sol';
 
-contract Nft is ERC721 {
+contract MockERC721 is ERC721 {
   using Strings for uint256;
  
-  constructor() ERC721('Nft', 'NFT') {}
+  constructor() ERC721('MockERC721', 'MockERC721') {}
 
   function mint(address to, uint256 tokenId) external {
     _mint(to, tokenId);
