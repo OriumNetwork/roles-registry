@@ -5,7 +5,6 @@ pragma solidity 0.8.9;
 import { IERC7432 } from "./interfaces/IERC7432.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 contract RolesRegistry is IERC7432 {
     // grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
@@ -28,10 +27,11 @@ contract RolesRegistry is IERC7432 {
     modifier onlyOwnerOrApproved(
         address _tokenAddress,
         uint256 _tokenId,
-        address _account
+        address _account,
+        uint256 _amount
     ) {
         require(
-            _isOwner(_tokenAddress, _tokenId, msg.sender) ||
+            _isOwner(_tokenAddress, _tokenId, _amount, msg.sender) ||
             _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
             "RolesRegistry: sender must be token owner or approved"
         );
@@ -41,9 +41,10 @@ contract RolesRegistry is IERC7432 {
     modifier isTokenOwner(
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _account
     ) {
-        require(_isOwner(_tokenAddress, _tokenId, _account), "RolesRegistry: account must be token owner");
+        require(_isOwner(_tokenAddress, _tokenId, _amount, _account), "RolesRegistry: account must be token owner");
         _;
     }
 
@@ -51,18 +52,20 @@ contract RolesRegistry is IERC7432 {
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantee,
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external isTokenOwner(_tokenAddress, _tokenId, msg.sender) {
-        _grantRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, _expirationDate, _revocable, _data);
+    ) external isTokenOwner(_tokenAddress, _tokenId, _amount, msg.sender) {
+        _grantRole(_role, _tokenAddress, _tokenId, _amount, msg.sender, _grantee, _expirationDate, _revocable, _data);
     }
 
     function grantRoleFrom(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
@@ -70,17 +73,17 @@ contract RolesRegistry is IERC7432 {
         bytes calldata _data
     )
         external
-        override
-        isTokenOwner(_tokenAddress, _tokenId, _grantor)
-        onlyOwnerOrApproved(_tokenAddress, _tokenId, _grantor)
+        isTokenOwner(_tokenAddress, _tokenId, _amount, _grantor)
+        onlyOwnerOrApproved(_tokenAddress, _tokenId, _grantor, _amount)
     {
-        _grantRole(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
+        _grantRole(_role, _tokenAddress, _tokenId, _amount, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
     function _grantRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
@@ -97,17 +100,18 @@ contract RolesRegistry is IERC7432 {
             require(_roleData.revocable, "RolesRegistry: role is not revocable");
         }
 
-        roleAssignments[_grantee][_tokenAddress][_tokenId][_role] = RoleData(_expirationDate, _revocable, _data);
+        roleAssignments[_grantee][_tokenAddress][_tokenId][_role] = RoleData(_amount, _expirationDate, _revocable, _data);
         latestGrantees[_tokenAddress][_tokenId][_role] = _grantee;
-        emit RoleGranted(_role, _tokenAddress, _tokenId, _grantor, _grantee, _expirationDate, _revocable, _data);
+        emit RoleGranted(_role, _tokenAddress, _tokenId, _amount, _grantor, _grantee, _expirationDate, _revocable, _data);
     }
 
     function revokeRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantee
-    ) external isTokenOwner(_tokenAddress, _tokenId, msg.sender) {
+    ) external isTokenOwner(_tokenAddress, _tokenId, _amount, msg.sender) {
         _revokeRole(_role, _tokenAddress, _tokenId, msg.sender, _grantee, msg.sender);
     }
 
@@ -115,10 +119,11 @@ contract RolesRegistry is IERC7432 {
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _revoker,
         address _grantee
-    ) external override isTokenOwner(_tokenAddress, _tokenId, _revoker) {
-        address _caller = _isOwner(_tokenAddress, _tokenId, msg.sender) ? _revoker : _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
+    ) external override isTokenOwner(_tokenAddress, _tokenId, _amount, _revoker) {
+        address _caller = _isOwner(_tokenAddress, _tokenId, _amount, msg.sender) ? _revoker : _getApprovedCaller(_tokenAddress, _tokenId, _revoker, _grantee);
         _revokeRole(_role, _tokenAddress, _tokenId, _revoker, _grantee, _caller);
     }
 
@@ -145,35 +150,40 @@ contract RolesRegistry is IERC7432 {
         address _grantee,
         address _caller
     ) internal {
+        RoleData memory _roleData = roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
         require(
-            _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
+            _caller == _grantee || _roleData.revocable,
             "RolesRegistry: Role is not revocable or caller is not the grantee"
         );
         delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
         delete latestGrantees[_tokenAddress][_tokenId][_role];
-        emit RoleRevoked(_role, _tokenAddress, _tokenId, _revoker, _grantee);
+        emit RoleRevoked(_role, _tokenAddress, _tokenId, _roleData.amount, _revoker, _grantee);
     }
 
     function hasRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor, // not used, but needed for compatibility with ERC7432
         address _grantee
     ) external view returns (bool) {
-        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
+        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp &&
+            _amount <= roleAssignments[_grantee][_tokenAddress][_tokenId][_role].amount;
     }
 
     function hasUniqueRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor, // not used, but needed for compatibility with ERC7432
         address _grantee
     ) external view returns (bool) {
         return
             latestGrantees[_tokenAddress][_tokenId][_role] == _grantee &&
-            roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
+            roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp &&
+            _amount <= roleAssignments[_grantee][_tokenAddress][_tokenId][_role].amount;
     }
 
     function roleData(
@@ -240,12 +250,8 @@ contract RolesRegistry is IERC7432 {
             getApprovedRole(_tokenAddress, _tokenId, _grantor, _operator);
     }
 
-    function _isERC1155(address _tokenAddress) internal view returns (bool) {
-        return ERC165Checker.supportsInterface(_tokenAddress, type(IERC1155).interfaceId);
-    }
-
-    function _isOwner(address _tokenAddress, uint256 _tokenId, address _account) internal view returns (bool) {
-        if (_isERC1155(_tokenAddress)) return IERC1155(_tokenAddress).balanceOf(_account, _tokenId) > 0;
+    function _isOwner(address _tokenAddress, uint256 _tokenId, uint256 _amount, address _account) internal view returns (bool) {
+        if (_amount > 0) return IERC1155(_tokenAddress).balanceOf(_account, _tokenId) >= _amount;
         else return _account == IERC721(_tokenAddress).ownerOf(_tokenId); // Assuming that the token implements ERC721
     }
 }

@@ -9,6 +9,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 /// Note: the ERC-165 identifier for this interface is 0x25be10b2.
 interface IERC7432 is IERC165 {
     struct RoleData {
+        uint256 amount;
         uint64 expirationDate;
         bool revocable;
         bytes data;
@@ -20,6 +21,7 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount.
     /// @param _grantor The user assigning the role.
     /// @param _grantee The user receiving the role.
     /// @param _expirationDate The expiration date of the role.
@@ -29,6 +31,7 @@ interface IERC7432 is IERC165 {
         bytes32 indexed _role,
         address indexed _tokenAddress,
         uint256 indexed _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
@@ -40,12 +43,14 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount.
     /// @param _revoker The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
     event RoleRevoked(
         bytes32 indexed _role,
         address indexed _tokenAddress,
         uint256 indexed _tokenId,
+        uint256 _amount,
         address _revoker,
         address _grantee
     );
@@ -86,6 +91,7 @@ interface IERC7432 is IERC165 {
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantee,
         uint64 _expirationDate,
         bool _revocable,
@@ -96,11 +102,13 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount.
     /// @param _grantee The user that receives the role revocation.
     function revokeRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantee
     ) external;
 
@@ -108,6 +116,7 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount.
     /// @param _grantor The user assigning the role.
     /// @param _grantee The user that receives the role.
     /// @param _expirationDate The expiration date of the role.
@@ -117,6 +126,7 @@ interface IERC7432 is IERC165 {
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee,
         uint64 _expirationDate,
@@ -128,12 +138,14 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount.
     /// @param _revoker The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
     function revokeRoleFrom(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _revoker,
         address _grantee
     ) external;
@@ -166,12 +178,14 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount. Pass 0 to ignore.
     /// @param _grantor The user that assigned the role.
     /// @param _grantee The user that received the role.
     function hasRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee
     ) external view returns (bool);
@@ -180,12 +194,14 @@ interface IERC7432 is IERC165 {
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
+    /// @param _amount The token amount. Pass 0 to ignore.
     /// @param _grantor The user that assigned the role.
     /// @param _grantee The user that received the role.
     function hasUniqueRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        uint256 _amount,
         address _grantor,
         address _grantee
     ) external view returns (bool);
