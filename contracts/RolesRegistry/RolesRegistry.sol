@@ -32,7 +32,7 @@ contract RolesRegistry is IERC7432 {
     ) {
         require(
             _isOwner(_tokenAddress, _tokenId, msg.sender) ||
-                _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
+            _isRoleApproved(_tokenAddress, _tokenId, _account, msg.sender),
             "RolesRegistry: sender must be token owner or approved"
         );
         _;
