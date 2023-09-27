@@ -14,7 +14,6 @@ const ONE_DAY = 60 * 60 * 24
 describe('RolesRegistry', () => {
   let RolesRegistry: Contract
   let mockERC721: Contract
-  let mockERC1155: Contract
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let deployer: SignerWithAddress
@@ -83,12 +82,7 @@ describe('RolesRegistry', () => {
     mockERC721 = await MockERC721Factory.deploy()
     await mockERC721.deployed()
 
-    const MockERC1155Factory = await ethers.getContractFactory('MockERC1155')
-    mockERC1155 = await MockERC1155Factory.deploy()
-    await mockERC1155.deployed()
-
     await mockERC721.mint(grantor.address, tokenId)
-    await mockERC1155.mint(grantor.address, tokenId, 1, HashZero)
   })
 
   describe('Main Functions', async () => {
@@ -131,30 +125,6 @@ describe('RolesRegistry', () => {
             data,
           )
       })
-      it('should grant role for ERC1155', async () => {
-        await expect(
-          RolesRegistry.connect(grantor).grantRole(
-            PROPERTY_MANAGER,
-            mockERC1155.address,
-            tokenId,
-            userOne.address,
-            expirationDate,
-            revocable,
-            data,
-          ),
-        )
-          .to.emit(RolesRegistry, 'RoleGranted')
-          .withArgs(
-            PROPERTY_MANAGER,
-            mockERC1155.address,
-            tokenId,
-            grantor.address,
-            userOne.address,
-            expirationDate,
-            revocable,
-            data,
-          )
-      })
       it('should NOT grant role if expiration date is in the past', async () => {
         const blockNumber = await hre.ethers.provider.getBlockNumber()
         const block = await hre.ethers.provider.getBlock(blockNumber)
@@ -184,19 +154,6 @@ describe('RolesRegistry', () => {
             HashZero,
           ),
         ).to.be.revertedWith(`RolesRegistry: account must be token owner`)
-      })
-      it.skip('should NOT grant role if token is neither ERC721 nor ERC1155', async () => {
-        await expect(
-          RolesRegistry.connect(grantor).grantRole(
-            PROPERTY_MANAGER,
-            deployer.address,
-            tokenId,
-            userOne.address,
-            expirationDate,
-            revocable,
-            HashZero,
-          ),
-        ).to.be.revertedWith(`RolesRegistry: token address is not ERC1155 or ERC721`)
       })
     })
 
