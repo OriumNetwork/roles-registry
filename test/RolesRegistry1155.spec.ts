@@ -9,7 +9,7 @@ const ONE_DAY = 60 * 60 * 24
 describe('RolesRegistry1155', async () => {
 
   const tokenId = 1
-  const tokenAmount = BigNumber.from(5)
+  const tokenAmount = BigNumber.from(25)
   const revocable = true
   let expirationDate: number
 
@@ -26,7 +26,7 @@ describe('RolesRegistry1155', async () => {
   ] = await ethers.getSigners()
 
   beforeEach(async () => {
-    const RolesRegistryFactory = await ethers.getContractFactory('RolesRegistry1155')
+    const RolesRegistryFactory = await ethers.getContractFactory('SftRolesRegistry')
     RolesRegistry = await RolesRegistryFactory.deploy()
 
     const MockERC1155Factory = await ethers.getContractFactory('MockERC1155')
@@ -51,6 +51,7 @@ describe('RolesRegistry1155', async () => {
     const customData = defaultAbiCoder.encode(['(uint256 eventId,uint256[] split)[]'], [profitSplit])
 
     roleAssignment = {
+      nonce: 0,
       role: solidityKeccak256(['string'], ['PROPERTY_MANAGER']),
       tokenAddress: mockERC1155.address,
       tokenId: tokenId,
@@ -67,9 +68,7 @@ describe('RolesRegistry1155', async () => {
 
     it('should grant role from for ERC1155', async () => {
 
-      // console.log('grantor', grantor.address)
-      // const balance = await mockERC1155.balanceOf(grantor.address, tokenId)
-      // console.log('balance', balance.toString())
+      expect(await mockERC1155.balanceOf(grantor.address, tokenId)).to.equal(tokenAmount)
 
       await mockERC1155.connect(grantor).setApprovalForAll(RolesRegistry.address, true)
       await expect(RolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
@@ -84,6 +83,9 @@ describe('RolesRegistry1155', async () => {
         //   revocable,
         //   data,
         // )
+
+      expect(await mockERC1155.balanceOf(grantor.address, tokenId)).to.equal(0)
+
     })
 
   })

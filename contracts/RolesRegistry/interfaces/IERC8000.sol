@@ -16,6 +16,7 @@ interface IERC8000 is IERC165 {
     }
 
     struct RoleAssignment {
+        uint256 nonce;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -23,11 +24,12 @@ interface IERC8000 is IERC165 {
         address grantor;
         address grantee;
         uint64 expirationDate;
+        bool revocable;
         bytes data;
     }
 
     struct RevokeRoleData {
-        uint256 recordId;
+        uint256 nonce;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -49,9 +51,10 @@ interface IERC8000 is IERC165 {
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
     event RoleGranted(
+        uint256 indexed _nonce,
         bytes32 indexed _role,
-        address indexed _tokenAddress,
-        uint256 indexed _tokenId,
+        address _tokenAddress,
+        uint256 _tokenId,
         uint256 _tokenAmount,
         address _grantor,
         address _grantee,
@@ -90,11 +93,7 @@ interface IERC8000 is IERC165 {
 
     /// @notice Grants a role on behalf of a user.
     /// @param _roleAssignment The role assignment data.
-    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external returns (uint256 recordId_);
-
-    /// @notice Grants a role on behalf of a user.
-    /// @param _roleAssignment The role assignment data.
-    function grantRevocableRoleFrom(RoleAssignment calldata _roleAssignment) external returns (uint256 recordId_);
+    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external;
 
     /// @notice Revokes a role on behalf of a user.
     /// @param _revokeRoleData The struct with all the revocation data.
@@ -111,34 +110,6 @@ interface IERC8000 is IERC165 {
     ) external;
 
     /** View Functions **/
-
-    /// @notice Checks if a user has a role.
-    /// @param _role The role identifier.
-    /// @param _tokenAddress The token address.
-    /// @param _tokenId The token identifier.
-    /// @param _grantor The user that assigned the role.
-    /// @param _grantee The user that received the role.
-//    function hasNonUniqueRole(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _grantor,
-//        address _grantee
-//    ) external view returns (bool);
-
-    /// @notice Checks if a user has a unique role.
-    /// @param _role The role identifier.
-    /// @param _tokenAddress The token address.
-    /// @param _tokenId The token identifier.
-    /// @param _grantor The user that assigned the role.
-    /// @param _grantee The user that received the role.
-//    function hasRole(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _grantor,
-//        address _grantee
-//    ) external view returns (bool);
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _recordId The identifier of the record.
@@ -159,15 +130,4 @@ interface IERC8000 is IERC165 {
         address _operator
     ) external view returns (bool);
 
-    /// @notice Returns the last grantee of a role.
-    /// @param _role The role.
-    /// @param _tokenAddress The token address.
-    /// @param _tokenId The token ID.
-    /// @param _grantor The user that granted the role.
-//    function lastGrantee(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _grantor
-//    ) external view returns (address);
 }
