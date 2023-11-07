@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 pragma abicoder v2;
 
 import "hardhat/console.sol";
-import { IERC8000 } from "./interfaces/IERC8000.sol";
+import { IERCXXXX } from "./interfaces/IERCXXXX.sol";
 import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
@@ -15,7 +15,7 @@ import { BinaryTrees } from "./libraries/BinaryTrees.sol";
 // todo can grant role of an NFT already deposited?
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegistry", "1") {
+contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("ERC1155RolesRegistry", "1") {
     using BinaryTrees for BinaryTrees.Tree;
     using BinaryTrees for BinaryTrees.TreeNode;
 
@@ -263,11 +263,5 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
     ) public view override returns (bool) {
         return tokenApprovals[_grantor][_tokenAddress][_operator];
     }
-
-    // Other ERCs
-
-//    function supportsInterface(bytes4 interfaceId) external view virtual override(ERC1155Holder) returns (bool) {
-//        return interfaceId == type(IERC8000).interfaceId || interfaceId == type(IERC1155).interfaceId;
-//    }
 
 }

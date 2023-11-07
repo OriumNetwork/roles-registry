@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERC8000 } from "../interfaces/IERC8000.sol";
+import { IERCXXXX } from "../interfaces/IERCXXXX.sol";
 
 
 library BinaryTrees {
@@ -17,7 +17,7 @@ library BinaryTrees {
     }
 
     struct TreeNode {
-        IERC8000.RoleData data;
+        IERCXXXX.RoleData data;
         uint256 parent;
         uint256 left;
         uint256 right;
@@ -26,7 +26,7 @@ library BinaryTrees {
 
     // Insert ================================================================
 
-    function insert(Tree storage _self, uint256 _nonce, IERC8000.RoleData memory _data) internal {
+    function insert(Tree storage _self, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
 
         if (_self.root == EMPTY) {
             // if the tree is empty

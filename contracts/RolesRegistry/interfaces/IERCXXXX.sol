@@ -4,10 +4,10 @@ pragma solidity 0.8.9;
 
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-/// @title ERC-7432 Non-Fungible Token Roles
-/// @dev See https://eips.ethereum.org/EIPS/eip-TBD
+/// @title ERC-XXXX Semi-Fungible Token Roles
+/// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
 /// Note: the ERC-165 identifier for this interface is 0xTBD
-interface IERC8000 is IERC165 {
+interface IERCXXXX is IERC165 {
     struct RoleData {
         address grantor;
         uint256 tokenAmount;
