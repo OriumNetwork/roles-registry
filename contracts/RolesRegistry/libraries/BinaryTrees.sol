@@ -4,15 +4,16 @@ pragma solidity 0.8.9;
 
 import { IERCXXXX } from "../interfaces/IERCXXXX.sol";
 
-
 library BinaryTrees {
 
     uint256 public constant EMPTY = 0;
     bool public constant RED = true;
     bool public constant BLACK = false;
 
-    struct Tree {
-        uint256 root;
+    struct Trees {
+        // grantee => role => tokenAddress => tokenId => treeRoot
+        mapping(bytes32 => uint256) roots;
+        // nonce => TreeNode
         mapping (uint256 => TreeNode) nodes;
     }
 
@@ -26,31 +27,31 @@ library BinaryTrees {
 
     // Insert ================================================================
 
-    function insert(Tree storage _self, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
+    function insert(Trees storage _self, bytes32 _rootKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
 
-        if (_self.root == EMPTY) {
+        if (_self.roots[_rootKey] == EMPTY) {
             // if the tree is empty
             // insert node here as black
-            _self.root = _nonce;
+            _self.roots[_rootKey] = _nonce;
             _self.nodes[_nonce] = TreeNode(_data, 0, 0, 0, BLACK);
         } else {
             // if root exists
             // start searching for the right place to insert it
-            (TreeNode storage parent, uint256 parentNonce) = _insertHelper(_self, _self.root, _nonce, _data.expirationDate);
+            (TreeNode storage parent, uint256 parentNonce) = _insertHelper(_self, _self.roots[_rootKey], _nonce, _data.expirationDate);
             // insert new node as red
             _self.nodes[_nonce] = TreeNode(_data, parentNonce, 0, 0, RED);
             // check for violations (only if parent is red)
             if (parent.color == RED) {
                 // if parent is red
                 // fix violations
-                _fixViolations(_self, _self.nodes[_nonce], _nonce, parent, parentNonce);
+                _fixViolations(_self, _self.roots[_rootKey], _self.nodes[_nonce], _nonce, parent, parentNonce);
             }
         }
 
     }
 
     function _insertHelper(
-        Tree storage _self, uint256 _parentNonce, uint256 _nonce, uint64 _expirationDate
+        Trees storage _self, uint256 _parentNonce, uint256 _nonce, uint64 _expirationDate
     ) private returns (TreeNode storage parent_, uint256 parentNonce_) {
         TreeNode storage parentNode = _self.nodes[_parentNonce];
 
@@ -80,7 +81,8 @@ library BinaryTrees {
     }
 
     function _fixViolations(
-        Tree storage _self,
+        Trees storage _self,
+        uint256 _root,
         TreeNode storage _node,
         uint256 _nonce,
         TreeNode storage _parent,
@@ -97,7 +99,7 @@ library BinaryTrees {
             uncle.color = BLACK;
             _parent.color = BLACK;
             // only recolor grandparent if it's not the root
-            if (_parent.parent != _self.root) {
+            if (_parent.parent != _root) {
                 grandParent.color = RED;
             }
             return;
@@ -140,7 +142,7 @@ library BinaryTrees {
 
     }
 
-    function _leftRotateAndUpdateRelativesColor(Tree storage _self, TreeNode storage _node, uint256 _nonce) private {
+    function _leftRotateAndUpdateRelativesColor(Trees storage _self, TreeNode storage _node, uint256 _nonce) private {
         // left rotate grandparent
         TreeNode storage currentParent = _self.nodes[_node.parent];
         _leftRotation(_self, _self.nodes[currentParent.parent], currentParent.parent);
@@ -160,7 +162,7 @@ library BinaryTrees {
     // Helpers ===============================================================
 
     function _findUncle(
-        Tree storage _self, uint256 _parentNonce, TreeNode storage _parent
+        Trees storage _self, uint256 _parentNonce, TreeNode storage _parent
     ) private view returns (TreeNode storage uncle_) {
         TreeNode storage grandParent = _self.nodes[_parent.parent];
         if (_parentNonce == grandParent.right) {
@@ -171,7 +173,7 @@ library BinaryTrees {
     }
 
     function _leftRotation(
-        Tree storage _self, TreeNode storage _node, uint256 _nonce
+        Trees storage _self, TreeNode storage _node, uint256 _nonce
     ) private returns (TreeNode storage node_) {
         TreeNode storage rightChild = _self.nodes[_node.right];
         uint256 rightChildLeftChildNonce = rightChild.left;
@@ -195,7 +197,7 @@ library BinaryTrees {
     }
 
     function _rightRotation(
-        Tree storage _self, TreeNode storage _node, uint256 _nonce
+        Trees storage _self, TreeNode storage _node, uint256 _nonce
     ) private returns (TreeNode storage node_) {
         TreeNode storage oldParent = _self.nodes[_node.parent];
         TreeNode storage rightChildNode = _self.nodes[_node.right];
@@ -226,7 +228,7 @@ library BinaryTrees {
     // =======================================================================
 
     // todo verify more edge cases
-    function remove(Tree storage _self, uint256 _nonce) internal {
+    function remove(Trees storage _self, bytes32 _rootKey, uint256 _nonce) internal {
         TreeNode storage _nodeToRemove = _self.nodes[_nonce];
 
 //        // modify removed nonce parent

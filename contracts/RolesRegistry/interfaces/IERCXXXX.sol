@@ -114,12 +114,11 @@ interface IERCXXXX is IERC165 {
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _recordId The identifier of the record.
-//    function roleData(uint256 _recordId) external view returns (RoleData memory data_);
-//    function roleData(address _tokenAddress, uint256 _recordId) external view returns (RoleData memory data_);
+    function roleData(uint256 _recordId) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _recordId The identifier of the record.
-//    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_);
+    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.

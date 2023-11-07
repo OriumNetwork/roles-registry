@@ -10,21 +10,20 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 // todo can revoke role withdraw when the role is expired?
 // todo can grant role of an NFT already deposited?
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry", "1") {
-    using BinaryTrees for BinaryTrees.Tree;
+contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
+    using BinaryTrees for BinaryTrees.Trees;
     using BinaryTrees for BinaryTrees.TreeNode;
 
-    // grantee => role => tokenAddress => tokenId => Tree<RoleData>
-    mapping(address => mapping(bytes32 => mapping(address => mapping(uint256 => BinaryTrees.Tree)))) public trees;
+    // binary tree for each role balance (grantee + role + tokenAddress + tokenId)
+    BinaryTrees.Trees internal trees;
 
     // nonce => RoleData
-    mapping(uint256 => RoleData) public roleAssignments;
+//    mapping(uint256 => RoleData) public roleAssignments;
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
@@ -65,10 +64,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
             _roleAssignment.grantor
         );
 
-        BinaryTrees.Tree storage tree = trees[_roleAssignment.grantee][_roleAssignment.role][_roleAssignment.tokenAddress][_roleAssignment.tokenId];
-        BinaryTrees.TreeNode storage node = tree.nodes[_roleAssignment.nonce];
+        bytes32 rootKey = _getRootKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
+        BinaryTrees.TreeNode storage node = trees.nodes[_roleAssignment.nonce];
         if (node.data.expirationDate == 0) {
             // expirationDate is only zero when the node does not exist
+            // transfer tokens to roles registry
             _transferFrom(
                 _roleAssignment.grantor,
                 address(this),
@@ -95,11 +95,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
             }
 
             // remove node from tree
-            tree.remove(_roleAssignment.nonce);
+            trees.remove(rootKey, _roleAssignment.nonce);
 
         }
 
-        RoleData memory roleData = RoleData(
+        RoleData memory data = RoleData(
             hash,
             _roleAssignment.tokenAmount,
             _roleAssignment.expirationDate,
@@ -107,7 +107,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
             _roleAssignment.data
         );
 
-        tree.insert(_roleAssignment.nonce, roleData);
+        trees.insert(rootKey, _roleAssignment.nonce, data);
 
         emit RoleGranted(
             _roleAssignment.nonce,
@@ -158,34 +158,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
         IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, "");
     }
 
-    function _hashRoleData(
-        uint256 _nonce,
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-//        uint256 _tokenAmount,
-        address _grantor//,
-//        address _grantee
-    ) internal view returns (bytes32) {
-        return _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    keccak256(
-//                        "RoleAssignment(uint256 nonce,bytes32 role,address tokenAddress,uint256 tokenId,uint256 tokenAmount,address grantor,address grantee)"
-                        "RoleAssignment(uint256 nonce,bytes32 role,address tokenAddress,uint256 tokenId)"
-                    ),
-                    _nonce,
-                    _role,
-                    _tokenAddress,
-                    _tokenId,
-//                    _tokenAmount,
-                    _grantor//,
-//                    _grantee
-                )
-            )
-        );
-    }
-
     function _findCaller(RevokeRoleData calldata _revokeRoleData) internal view returns (address) {
         if (_revokeRoleData.revoker == msg.sender ||
             isRoleApprovedForAll(_revokeRoleData.tokenAddress, _revokeRoleData.revoker, msg.sender)
@@ -217,8 +189,30 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
         return tokenApprovals[_grantor][_tokenAddress][_operator];
     }
 
+    function roleData(uint256 _recordId) external view returns (RoleData memory data_) {
+        return trees.nodes[_recordId].data;
+    }
+
+    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_) {
+        return trees.nodes[_recordId].data.expirationDate;
+    }
+
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
         return interfaceId == type(IERCXXXX).interfaceId || interfaceId == type(IERC1155Receiver).interfaceId;
+    }
+
+    /** Helper Functions **/
+
+    function _hashRoleData(
+        uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(_nonce, _role, _tokenAddress, _tokenId, _grantor));
+    }
+
+    function _getRootKey(
+        address _grantee, bytes32 _role, address _tokenAddress, uint256 _tokenId
+    ) internal pure returns (bytes32 rootKey_) {
+        return keccak256(abi.encodePacked(_grantee, _role, _tokenAddress, _tokenId));
     }
 
 }
