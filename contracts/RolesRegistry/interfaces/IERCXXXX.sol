@@ -9,7 +9,7 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 /// Note: the ERC-165 identifier for this interface is 0xTBD
 interface IERCXXXX is IERC165 {
     struct RoleData {
-        address grantor;
+        bytes32 hash;
         uint256 tokenAmount;
         uint64 expirationDate;
         bool revocable;
