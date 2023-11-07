@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: CC0-1.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
 import "hardhat/console.sol";
 import { IERCXXXX } from "./interfaces/IERCXXXX.sol";
-import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import { BinaryTrees } from "./libraries/BinaryTrees.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import { BinaryTrees } from "./libraries/BinaryTrees.sol";
 
 // todo can revoke role withdraw when the role is expired?
 // todo can grant role of an NFT already deposited?
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("ERC1155RolesRegistry", "1") {
+contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry", "1") {
     using BinaryTrees for BinaryTrees.Tree;
     using BinaryTrees for BinaryTrees.TreeNode;
 
@@ -262,6 +263,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("ERC1155RolesRegist
         address _operator
     ) public view override returns (bool) {
         return tokenApprovals[_grantor][_tokenAddress][_operator];
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
+        return interfaceId == type(IERCXXXX).interfaceId || interfaceId == type(IERC1155Receiver).interfaceId;
     }
 
 }
