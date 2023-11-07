@@ -21,6 +21,8 @@ const {
   POLYGON_PROVIDER_URL,
   MUMBAI_PROVIDER_URL,
   GOERLI_PROVIDER_URL,
+  CRONOS_TESTNET_PROVIDER_URL,
+  CRONOSSCAN_API_KEY,
 } = process.env
 
 const BASE_CONFIG = {
@@ -55,7 +57,18 @@ const BASE_CONFIG = {
       polygon: POLYGONSCAN_API_KEY,
       polygonMumbai: POLYGONSCAN_API_KEY,
       goerli: ETHER_SCAN_API_KEY,
+      cronosTestnet: CRONOSSCAN_API_KEY,
     },
+    customChains: [
+      {
+        network: 'cronosTestnet',
+        chainId: 338,
+        urls: {
+          apiURL: 'https://cronos.org/explorer/testnet3/api',
+          blockExplorerURL: 'https://cronos.org/explorer/testnet3',
+        },
+      },
+    ],
   },
   networks: {
     hardhat: {
@@ -93,6 +106,11 @@ const PROD_CONFIG = {
     goerli: {
       chainId: 5,
       url: GOERLI_PROVIDER_URL,
+      accounts: [DEV_PRIVATE_KEY],
+    },
+    cronosTestnet: {
+      chainId: 338,
+      url: CRONOS_TESTNET_PROVIDER_URL,
       accounts: [DEV_PRIVATE_KEY],
     },
   },
