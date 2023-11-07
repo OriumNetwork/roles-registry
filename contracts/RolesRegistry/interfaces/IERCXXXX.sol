@@ -4,19 +4,18 @@ pragma solidity 0.8.9;
 
 import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-/// @title ERC-7432 Non-Fungible Token Roles
-/// @dev See https://eips.ethereum.org/EIPS/eip-TBD
+/// @title ERC-XXXX Semi-Fungible Token Roles
+/// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
 /// Note: the ERC-165 identifier for this interface is 0xTBD
-interface IERC8000 is IERC165 {
+interface IERCXXXX is IERC165 {
     struct RoleData {
         bytes32 hash;
+        uint256 tokenAmount;
         uint64 expirationDate;
-        bool revocable;
         bytes data;
     }
 
     struct RoleAssignment {
-        uint256 nonce;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -29,7 +28,7 @@ interface IERC8000 is IERC165 {
     }
 
     struct RevokeRoleData {
-        uint256 nonce;
+        uint256 recordId;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -41,6 +40,7 @@ interface IERC8000 is IERC165 {
     /** Events **/
 
     /// @notice Emitted when a role is granted.
+    /// @param _recordId The record identifier.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
@@ -51,7 +51,7 @@ interface IERC8000 is IERC165 {
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
     event RoleGranted(
-        uint256 indexed _nonce,
+        uint256 indexed _recordId,
         bytes32 indexed _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -64,6 +64,7 @@ interface IERC8000 is IERC165 {
     );
 
     /// @notice Emitted when a role is revoked.
+    /// @param _recordId The record identifier.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
@@ -71,15 +72,16 @@ interface IERC8000 is IERC165 {
     /// @param _revoker The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
     event RoleRevoked(
+        uint256 indexed _recordId,
         bytes32 indexed _role,
-        address indexed _tokenAddress,
-        uint256 indexed _tokenId,
+        address _tokenAddress,
+        uint256 _tokenId,
         uint256 _tokenAmount,
         address _revoker,
         address _grantee
     );
 
-    /// @notice Emitted when a user is approved to manage any role on behalf of another user.
+    /// @notice Emitted when a user is approved to manage roles on behalf of another user.
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
     /// @param _isApproved The approval status.
@@ -93,7 +95,7 @@ interface IERC8000 is IERC165 {
 
     /// @notice Grants a role on behalf of a user.
     /// @param _roleAssignment The role assignment data.
-    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external;
+    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external returns (uint256 recordId_);
 
     /// @notice Revokes a role on behalf of a user.
     /// @param _revokeRoleData The struct with all the revocation data.
@@ -113,12 +115,11 @@ interface IERC8000 is IERC165 {
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _recordId The identifier of the record.
-//    function roleData(uint256 _recordId) external view returns (RoleData memory data_);
-//    function roleData(address _tokenAddress, uint256 _recordId) external view returns (RoleData memory data_);
+    function roleData(uint256 _recordId) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _recordId The identifier of the record.
-//    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_);
+    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.
@@ -130,4 +131,15 @@ interface IERC8000 is IERC165 {
         address _operator
     ) external view returns (bool);
 
+    /// @notice Calculates the amount of ERC-1155 tokens delegated to the specified _grantee.
+    /// @param _role The role identifier.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @param _grantee The user that received the role.
+    function roleBalanceOf(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantee
+    ) external view returns (uint256 balance_);
 }

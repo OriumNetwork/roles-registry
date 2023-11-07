@@ -1,23 +1,33 @@
 // SPDX-License-Identifier: CC0-1.0
 
 pragma solidity 0.8.9;
-pragma abicoder v2;
 
-import "hardhat/console.sol";
-import { IERC8000 } from "./interfaces/IERC8000.sol";
-import { ERC1155Holder } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import { IERCXXXX } from "./interfaces/IERCXXXX.sol";
+import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import { BitMaps } from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-// todo can revoke role withdraw when the role is expired?
-// todo can grant role of an NFT already deposited?
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegistry", "1") {
+contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry", "1") {
+    using BitMaps for BitMaps.BitMap;
+    using EnumerableSet for EnumerableSet.UintSet;
+
+    uint256 public constant MAX_RECORDS = 1000;
+
+    uint256 public recordCount;
+    BitMaps.BitMap internal isRevocable;
 
     // recordId => RoleData
     mapping(uint256 => RoleData) public roleAssignments;
+
+    // grantee => tokenAddress => tokenId => role => [recordId]
+    mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => EnumerableSet.UintSet)))) internal granteeToRoleAssignments;
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
@@ -36,55 +46,38 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
         _;
     }
 
+    /** External Functions **/
+
     function grantRoleFrom(RoleAssignment calldata _roleAssignment)
         external
         override
         validExpirationDate(_roleAssignment.expirationDate)
+        returns (uint256 recordId_)
     {
+        require(
+            granteeToRoleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
+                _roleAssignment.role
+            ].length() < MAX_RECORDS,
+            "RolesRegistry: max records reached"
+        );
         require(
             _roleAssignment.grantor == msg.sender ||
             IERC1155(_roleAssignment.tokenAddress).isApprovedForAll(_roleAssignment.grantor, msg.sender),
             "RolesRegistry: account not approved"
         );
 
-        if (roleAssignments[_roleAssignment.nonce].expirationDate == 0) {
+        _transferFrom(
+            _roleAssignment.grantor,
+            address(this),
+            _roleAssignment.tokenAddress,
+            _roleAssignment.tokenId,
+            _roleAssignment.tokenAmount
+        );
 
-            // if role assignment does not exist
-            _transferFrom(
-                _roleAssignment.grantor,
-                address(this),
-                _roleAssignment.tokenAddress,
-                _roleAssignment.tokenId,
-                _roleAssignment.tokenAmount
-            );
-
-        } else {
-            // todo
-            // if role assignment exist
-            require(roleAssignments[_roleAssignment.nonce].expirationDate < block.timestamp, "RolesRegistry: nonce provided is not expired");
-            require(
-                roleAssignments[_roleAssignment.nonce].tokenAddress == _roleAssignment.tokenAddress &&
-                    roleAssignments[_roleAssignment.nonce].tokenAmount >= _roleAssignment.tokenAmount,
-                "RolesRegistry: token amount must be greater or equal to the provided"
-            );
-
-            uint256 amountToWithdraw = roleAssignments[_roleAssignment.nonce].tokenAmount - _roleAssignment.tokenAmount;
-            if (amountToWithdraw > 0) {
-                _transferFrom(
-                    address(this),
-                    _roleAssignment.grantor,
-                    _roleAssignment.tokenAddress,
-                    _roleAssignment.tokenId,
-                    amountToWithdraw
-                );
-            }
-
-        }
-
-        _createRoleAssignment(_roleAssignment);
+        recordId_ = _createRoleAssignment(_roleAssignment);
 
         emit RoleGranted(
-            _roleAssignment.nonce,
+            recordId_,
             _roleAssignment.role,
             _roleAssignment.tokenAddress,
             _roleAssignment.tokenId,
@@ -97,44 +90,31 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
         );
     }
 
-    function _createRoleAssignment(RoleAssignment calldata _roleAssignment) internal {
-        bytes32 _hashedAssignment = _hashRoleData(
-            _roleAssignment.nonce,
-            _roleAssignment.role,
-            _roleAssignment.tokenAddress,
-            _roleAssignment.tokenId,
-            _roleAssignment.tokenAmount,
-            _roleAssignment.grantor,
-            _roleAssignment.grantee
-        );
+    function _createRoleAssignment(RoleAssignment calldata _roleAssignment) internal returns (uint256 recordId_) {
+        recordId_ = recordCount++;
+        bytes32 hashedData = _hashRoleData(recordId_, _roleAssignment);
 
-        roleAssignments[_roleAssignment.nonce] = RoleData(
-            _hashedAssignment,
-            _roleAssignment.expirationDate,
-            _roleAssignment.revocable,
-            _roleAssignment.data
-        );
+        roleAssignments[recordId_] = RoleData(hashedData, _roleAssignment.tokenAmount, _roleAssignment.expirationDate, _roleAssignment.data);
+        if (_roleAssignment.revocable) {
+            isRevocable.set(recordId_);
+        }
 
+        granteeToRoleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
+            _roleAssignment.role
+        ].add(recordId_);
     }
 
     function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external override {
-
-        bytes32 hash = _hashRoleData(
-            _revokeRoleData.nonce,
-            _revokeRoleData.role,
-            _revokeRoleData.tokenAddress,
-            _revokeRoleData.tokenId,
-            _revokeRoleData.tokenAmount,
-            _revokeRoleData.revoker,
-            _revokeRoleData.grantee
+        require(
+            roleAssignments[_revokeRoleData.recordId].hash == _hashRoleData(_revokeRoleData),
+            "RolesRegistry: invalid revoke role data"
         );
 
-        RoleData memory roleData = roleAssignments[_revokeRoleData.nonce];
-        require(roleData.hash == hash, "RolesRegistry: Could not find role assignment");
-
         address caller = _findCaller(_revokeRoleData);
-        if (!roleData.revocable) {
+        if (!isRevocable.get(_revokeRoleData.recordId)) {
             require(caller == _revokeRoleData.grantee, "RolesRegistry: Role is not revocable or caller is not the approved");
+        } else {
+            isRevocable.unset(_revokeRoleData.recordId);
         }
 
         _transferFrom(
@@ -145,15 +125,42 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
             _revokeRoleData.tokenAmount
         );
 
-        delete roleAssignments[_revokeRoleData.nonce];
+        delete roleAssignments[_revokeRoleData.recordId];
+        granteeToRoleAssignments[_revokeRoleData.grantee][_revokeRoleData.tokenAddress][_revokeRoleData.tokenId][
+            _revokeRoleData.role
+        ].remove(_revokeRoleData.recordId);
     }
 
     function _transferFrom(address _from, address _to, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) internal {
         IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, "");
     }
 
+    function _hashRoleData(RevokeRoleData calldata _revokeRoleData) internal view returns (bytes32) {
+        return _hashRoleData(
+            _revokeRoleData.recordId,
+            _revokeRoleData.role,
+            _revokeRoleData.tokenAddress,
+            _revokeRoleData.tokenId,
+            _revokeRoleData.tokenAmount,
+            _revokeRoleData.revoker,
+            _revokeRoleData.grantee
+        );
+    }
+
+    function _hashRoleData(uint256 _recordId, RoleAssignment calldata _roleAssignment) internal view returns (bytes32) {
+        return _hashRoleData(
+            _recordId,
+            _roleAssignment.role,
+            _roleAssignment.tokenAddress,
+            _roleAssignment.tokenId,
+            _roleAssignment.tokenAmount,
+            _roleAssignment.grantor,
+            _roleAssignment.grantee
+        );
+    }
+
     function _hashRoleData(
-        uint256 _nonce,
+        uint256 _recordId,
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -165,9 +172,9 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
             keccak256(
                 abi.encode(
                     keccak256(
-                        "RoleAssignment(uint256 nonce,bytes32 role,address tokenAddress,uint256 tokenId,uint256 tokenAmount,address grantor,address grantee)"
+                        "RoleAssignment(uint256 recordId,bytes32 role,address tokenAddress,uint256 tokenId,uint256 tokenAmount,address grantor,address grantee)"
                     ),
-                    _nonce,
+                    _recordId,
                     _role,
                     _tokenAddress,
                     _tokenId,
@@ -195,70 +202,19 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
         revert("RolesRegistry: sender must be approved");
     }
 
-//    function _getApprovedCaller(
-//        address _tokenAddress,
-//        address _revoker,
-//        address _grantee
-//    ) internal view returns (address) {
-//        if (isRoleApprovedForAll(_tokenAddress, _grantee, msg.sender)) {
-//            return _grantee;
-//        } else if (isRoleApprovedForAll(_tokenAddress, _revoker, msg.sender)) {
-//            return _revoker;
-//        } else {
-//            revert("RolesRegistry: sender must be approved");
-//        }
-//    }
-
-//    function _revokeRole(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _revoker,
-//        address _grantee,
-//        address _caller
-//    ) internal {
-//        require(
-//            _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
-//            "RolesRegistry: Role is not revocable or caller is not the grantee"
-//        );
-//        delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
-//        delete latestGrantees[_tokenAddress][_tokenId][_role];
-//        emit RoleRevoked(_role, _tokenAddress, _tokenId, _revoker, _grantee);
-//    }
-
-//    function hasNonUniqueRole(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _grantor, // not used, but needed for compatibility with ERC7432
-//        address _grantee
-//    ) external view returns (bool) {
-//        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
-//    }
-//
-//    function hasRole(
-//        bytes32 _role,
-//        address _tokenAddress,
-//        uint256 _tokenId,
-//        address _grantor, // not used, but needed for compatibility with ERC7432
-//        address _grantee
-//    ) external view returns (bool) {
-//        return
-//            latestGrantees[_tokenAddress][_tokenId][_role] == _grantee &&
-//            roleAssignments[_grantee][_tokenAddress][_tokenId][_role].expirationDate > block.timestamp;
-//    }
-
-//    function roleData(uint256 _recordId) external view returns (RoleData memory) {
-//        return roleAssignments[_recordId];
-//    }
-//
-//    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_) {
-//        return roleAssignments[_recordId].expirationDate;
-//    }
-
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
         tokenApprovals[msg.sender][_tokenAddress][_operator] = _isApproved;
         emit RoleApprovalForAll(_tokenAddress, _operator, _isApproved);
+    }
+
+    /** View Functions **/
+
+    function roleData(uint256 _recordId) external view returns (RoleData memory) {
+        return roleAssignments[_recordId];
+    }
+
+    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_) {
+        return roleAssignments[_recordId].expirationDate;
     }
 
     function isRoleApprovedForAll(
@@ -269,10 +225,23 @@ contract SftRolesRegistry is IERC8000, ERC1155Holder, EIP712("ERC1155RolesRegist
         return tokenApprovals[_grantor][_tokenAddress][_operator];
     }
 
-    // Other ERCs
+    function roleBalanceOf(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantee
+    ) external view returns (uint256 balance_) {
+        balance_ = 0;
+        for (uint256 i = 0; i < granteeToRoleAssignments[_grantee][_tokenAddress][_tokenId][_role].length(); i++) {
+            uint256 recordId = granteeToRoleAssignments[_grantee][_tokenAddress][_tokenId][_role].at(i);
+            if (roleAssignments[recordId].expirationDate > block.timestamp) {
+                balance_ += roleAssignments[recordId].tokenAmount;
+            }
+        }
+    }
 
-//    function supportsInterface(bytes4 interfaceId) external view virtual override(ERC1155Holder) returns (bool) {
-//        return interfaceId == type(IERC8000).interfaceId || interfaceId == type(IERC1155).interfaceId;
-//    }
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
+        return interfaceId == type(IERCXXXX).interfaceId || interfaceId == type(IERC1155Receiver).interfaceId;
+    }
 
 }
