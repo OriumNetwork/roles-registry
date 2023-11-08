@@ -22,14 +22,14 @@ async function main() {
 
   const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME)
   const create2Factory = await ethers.getContractAt(
-    'ImmutableOwnerCreate2Factory',
+    'IImmutableOwnerCreate2Factory',
     DeployAddresses.ImmutableOwnerCreate2Factory, // This address is the same on all networks
     signer,
   )
 
   const bytecode = ContractFactory.bytecode
   const salt = '0x00000000000000000000000000000000000000008b99e5a778edb02572010000'
-  const tx = await create2Factory.safeCreate2(salt, bytecode)
+  const tx = await create2Factory.deploy(salt, bytecode)
 
   console.log(`${CONTRACT_NAME} deployment txHash: ${tx.hash}`)
 }
