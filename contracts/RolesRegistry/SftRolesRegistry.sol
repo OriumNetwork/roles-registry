@@ -9,19 +9,15 @@ import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155
 import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import { BitMaps } from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry", "1") {
-    using BitMaps for BitMaps.BitMap;
     using EnumerableSet for EnumerableSet.UintSet;
 
     uint256 public constant MAX_RECORDS = 1000;
 
     uint256 public recordCount;
-    BitMaps.BitMap internal isRevocable;
 
     // recordId => RoleData
     mapping(uint256 => RoleData) public roleAssignments;
@@ -94,10 +90,13 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
         recordId_ = recordCount++;
         bytes32 hashedData = _hashRoleData(recordId_, _roleAssignment);
 
-        roleAssignments[recordId_] = RoleData(hashedData, _roleAssignment.tokenAmount, _roleAssignment.expirationDate, _roleAssignment.data);
-        if (_roleAssignment.revocable) {
-            isRevocable.set(recordId_);
-        }
+        roleAssignments[recordId_] = RoleData(
+            hashedData,
+            _roleAssignment.tokenAmount,
+            _roleAssignment.expirationDate,
+            _roleAssignment.revocable,
+            _roleAssignment.data
+        );
 
         granteeToRoleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
             _roleAssignment.role
@@ -111,10 +110,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
         );
 
         address caller = _findCaller(_revokeRoleData);
-        if (!isRevocable.get(_revokeRoleData.recordId)) {
+        if (!roleAssignments[_revokeRoleData.recordId].revocable) {
             require(caller == _revokeRoleData.grantee, "RolesRegistry: Role is not revocable or caller is not the approved");
-        } else {
-            isRevocable.unset(_revokeRoleData.recordId);
         }
 
         _transferFrom(

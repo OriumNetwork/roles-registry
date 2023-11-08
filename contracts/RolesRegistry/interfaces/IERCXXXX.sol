@@ -12,6 +12,7 @@ interface IERCXXXX is IERC165 {
         bytes32 hash;
         uint256 tokenAmount;
         uint64 expirationDate;
+        bool revocable;
         bytes data;
     }
 
