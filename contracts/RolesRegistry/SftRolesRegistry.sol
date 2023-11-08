@@ -8,11 +8,10 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry", "1") {
+contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     using EnumerableSet for EnumerableSet.UintSet;
 
     uint256 public constant MAX_RECORDS = 1000;
@@ -138,9 +137,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
             _revokeRoleData.role,
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
-            _revokeRoleData.tokenAmount,
-            _revokeRoleData.revoker,
-            _revokeRoleData.grantee
+            _revokeRoleData.revoker
         );
     }
 
@@ -150,37 +147,14 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder, EIP712("SftRolesRegistry",
             _roleAssignment.role,
             _roleAssignment.tokenAddress,
             _roleAssignment.tokenId,
-            _roleAssignment.tokenAmount,
-            _roleAssignment.grantor,
-            _roleAssignment.grantee
+            _roleAssignment.grantor
         );
     }
 
     function _hashRoleData(
-        uint256 _recordId,
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-        uint256 _tokenAmount,
-        address _grantor,
-        address _grantee
-    ) internal view returns (bytes32) {
-        return _hashTypedDataV4(
-            keccak256(
-                abi.encode(
-                    keccak256(
-                        "RoleAssignment(uint256 recordId,bytes32 role,address tokenAddress,uint256 tokenId,uint256 tokenAmount,address grantor,address grantee)"
-                    ),
-                    _recordId,
-                    _role,
-                    _tokenAddress,
-                    _tokenId,
-                    _tokenAmount,
-                    _grantor,
-                    _grantee
-                )
-            )
-        );
+        uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(_nonce, _role, _tokenAddress, _tokenId, _grantor));
     }
 
     function _findCaller(RevokeRoleData calldata _revokeRoleData) internal view returns (address) {
