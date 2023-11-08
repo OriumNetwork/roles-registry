@@ -17,6 +17,7 @@ interface IERCXXXX is IERC165 {
     }
 
     struct RoleAssignment {
+        uint256 nonce;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -29,7 +30,7 @@ interface IERCXXXX is IERC165 {
     }
 
     struct RevokeRoleData {
-        uint256 recordId;
+        uint256 nonce;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -41,7 +42,7 @@ interface IERCXXXX is IERC165 {
     /** Events **/
 
     /// @notice Emitted when a role is granted.
-    /// @param _recordId The record identifier.
+    /// @param _nonce The identifier of the role assignment.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
@@ -52,7 +53,7 @@ interface IERCXXXX is IERC165 {
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
     event RoleGranted(
-        uint256 indexed _recordId,
+        uint256 indexed _nonce,
         bytes32 indexed _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -65,7 +66,7 @@ interface IERCXXXX is IERC165 {
     );
 
     /// @notice Emitted when a role is revoked.
-    /// @param _recordId The record identifier.
+    /// @param _nonce The identifier of the role assignment.
     /// @param _role The role identifier.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
@@ -73,7 +74,7 @@ interface IERCXXXX is IERC165 {
     /// @param _revoker The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
     event RoleRevoked(
-        uint256 indexed _recordId,
+        uint256 indexed _nonce,
         bytes32 indexed _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -96,7 +97,7 @@ interface IERCXXXX is IERC165 {
 
     /// @notice Grants a role on behalf of a user.
     /// @param _roleAssignment The role assignment data.
-    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external returns (uint256 recordId_);
+    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external;
 
     /// @notice Revokes a role on behalf of a user.
     /// @param _revokeRoleData The struct with all the revocation data.
@@ -115,12 +116,12 @@ interface IERCXXXX is IERC165 {
     /** View Functions **/
 
     /// @notice Returns the custom data of a role assignment.
-    /// @param _recordId The identifier of the record.
-    function roleData(uint256 _recordId) external view returns (RoleData memory data_);
+    /// @param _nonce The identifier of the role assignment.
+    function roleData(uint256 _nonce) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
-    /// @param _recordId The identifier of the record.
-    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_);
+    /// @param _nonce The identifier of the role assignment.
+    function roleExpirationDate(uint256 _nonce) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.

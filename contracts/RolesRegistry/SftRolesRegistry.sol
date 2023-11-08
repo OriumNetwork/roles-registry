@@ -16,12 +16,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     uint256 public constant MAX_RECORDS = 1000;
 
-    uint256 public recordCount;
-
-    // recordId => RoleData
+    // nonce => RoleData
     mapping(uint256 => RoleData) public roleAssignments;
 
-    // grantee => tokenAddress => tokenId => role => [recordId]
+    // grantee => tokenAddress => tokenId => role => [nonce]
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => EnumerableSet.UintSet)))) internal granteeToRoleAssignments;
 
     // grantor => tokenAddress => operator => isApproved
@@ -47,7 +45,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         external
         override
         validExpirationDate(_roleAssignment.expirationDate)
-        returns (uint256 recordId_)
     {
         require(
             granteeToRoleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
@@ -69,10 +66,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.tokenAmount
         );
 
-        recordId_ = _createRoleAssignment(_roleAssignment);
+        _createRoleAssignment(_roleAssignment);
 
         emit RoleGranted(
-            recordId_,
+            _roleAssignment.nonce,
             _roleAssignment.role,
             _roleAssignment.tokenAddress,
             _roleAssignment.tokenId,
@@ -85,11 +82,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         );
     }
 
-    function _createRoleAssignment(RoleAssignment calldata _roleAssignment) internal returns (uint256 recordId_) {
-        recordId_ = recordCount++;
-        bytes32 hashedData = _hashRoleData(recordId_, _roleAssignment);
+    function _createRoleAssignment(RoleAssignment calldata _roleAssignment) internal {
+        bytes32 hashedData = _hashRoleData(_roleAssignment);
 
-        roleAssignments[recordId_] = RoleData(
+        roleAssignments[_roleAssignment.nonce] = RoleData(
             hashedData,
             _roleAssignment.tokenAmount,
             _roleAssignment.expirationDate,
@@ -99,17 +95,17 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
         granteeToRoleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
             _roleAssignment.role
-        ].add(recordId_);
+        ].add(_roleAssignment.nonce);
     }
 
     function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external override {
         require(
-            roleAssignments[_revokeRoleData.recordId].hash == _hashRoleData(_revokeRoleData),
+            roleAssignments[_revokeRoleData.nonce].hash == _hashRoleData(_revokeRoleData),
             "RolesRegistry: invalid revoke role data"
         );
 
         address caller = _findCaller(_revokeRoleData);
-        if (!roleAssignments[_revokeRoleData.recordId].revocable) {
+        if (!roleAssignments[_revokeRoleData.nonce].revocable) {
             require(caller == _revokeRoleData.grantee, "RolesRegistry: Role is not revocable or caller is not the approved");
         }
 
@@ -121,10 +117,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _revokeRoleData.tokenAmount
         );
 
-        delete roleAssignments[_revokeRoleData.recordId];
+        delete roleAssignments[_revokeRoleData.nonce];
         granteeToRoleAssignments[_revokeRoleData.grantee][_revokeRoleData.tokenAddress][_revokeRoleData.tokenId][
             _revokeRoleData.role
-        ].remove(_revokeRoleData.recordId);
+        ].remove(_revokeRoleData.nonce);
     }
 
     function _transferFrom(address _from, address _to, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) internal {
@@ -133,7 +129,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     function _hashRoleData(RevokeRoleData calldata _revokeRoleData) internal view returns (bytes32) {
         return _hashRoleData(
-            _revokeRoleData.recordId,
+            _revokeRoleData.nonce,
             _revokeRoleData.role,
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
@@ -141,9 +137,9 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         );
     }
 
-    function _hashRoleData(uint256 _recordId, RoleAssignment calldata _roleAssignment) internal view returns (bytes32) {
+    function _hashRoleData(RoleAssignment calldata _roleAssignment) internal view returns (bytes32) {
         return _hashRoleData(
-            _recordId,
+            _roleAssignment.nonce,
             _roleAssignment.role,
             _roleAssignment.tokenAddress,
             _roleAssignment.tokenId,
@@ -180,12 +176,12 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     /** View Functions **/
 
-    function roleData(uint256 _recordId) external view returns (RoleData memory) {
-        return roleAssignments[_recordId];
+    function roleData(uint256 _nonce) external view returns (RoleData memory) {
+        return roleAssignments[_nonce];
     }
 
-    function roleExpirationDate(uint256 _recordId) external view returns (uint64 expirationDate_) {
-        return roleAssignments[_recordId].expirationDate;
+    function roleExpirationDate(uint256 _nonce) external view returns (uint64 expirationDate_) {
+        return roleAssignments[_nonce].expirationDate;
     }
 
     function isRoleApprovedForAll(
@@ -204,9 +200,9 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     ) external view returns (uint256 balance_) {
         balance_ = 0;
         for (uint256 i = 0; i < granteeToRoleAssignments[_grantee][_tokenAddress][_tokenId][_role].length(); i++) {
-            uint256 recordId = granteeToRoleAssignments[_grantee][_tokenAddress][_tokenId][_role].at(i);
-            if (roleAssignments[recordId].expirationDate > block.timestamp) {
-                balance_ += roleAssignments[recordId].tokenAmount;
+            uint256 nonce = granteeToRoleAssignments[_grantee][_tokenAddress][_tokenId][_role].at(i);
+            if (roleAssignments[nonce].expirationDate > block.timestamp) {
+                balance_ += roleAssignments[nonce].tokenAmount;
             }
         }
     }
