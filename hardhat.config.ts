@@ -35,6 +35,15 @@ const BASE_CONFIG = {
           runs: 200,
         },
       },
+      {
+        version: '0.5.10',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 99999,
+          },
+        },
+      },
     ],
   },
   mocha: {
