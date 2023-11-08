@@ -29,11 +29,9 @@ async function main() {
 
   const bytecode = ContractFactory.bytecode
   const salt = '0x00000000000000000000000000000000000000008b99e5a778edb02572010000'
-  const contractAddress = await create2Factory.findCreate2AddressViaHash(salt, bytecode)
-  console.log(`Contract address: ${contractAddress}`)
-  //const tx = await create2Factory.safeCreate2(salt, bytecode)
+  const tx = await create2Factory.safeCreate2(salt, bytecode)
 
-  //console.log(`${CONTRACT_NAME} deployment txHash: ${tx.hash}`)
+  console.log(`${CONTRACT_NAME} deployment txHash: ${tx.hash}`)
 }
 
 main()
