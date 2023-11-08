@@ -1,7 +1,7 @@
 import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
-import { DeployAddresses } from '../../config'
-import { RoleAssignment } from '../../test/types'
+import { DeployAddresses } from '../config'
+import { RoleAssignment } from '../test/types'
 
 const kmsCredentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AKIAxxxxxxxxxxxxxxxx', // credentials for your IAM user with KMS access
