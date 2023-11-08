@@ -51,7 +51,7 @@ describe('RolesRegistry1155', async () => {
     const customData = defaultAbiCoder.encode(['(uint256 eventId,uint256[] split)[]'], [profitSplit])
 
     roleAssignment = {
-      nonce: 0,
+      nonce: 1,
       role: solidityKeccak256(['string'], ['PROPERTY_MANAGER']),
       tokenAddress: mockERC1155.address,
       tokenId: tokenId,

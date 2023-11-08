@@ -34,7 +34,6 @@ interface IERCXXXX is IERC165 {
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
-        uint256 tokenAmount;
         address revoker;
         address grantee;
     }
@@ -87,11 +86,7 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
     /// @param _isApproved The approval status.
-    event RoleApprovalForAll(
-        address indexed _tokenAddress,
-        address indexed _operator,
-        bool _isApproved
-    );
+    event RoleApprovalForAll(address indexed _tokenAddress, address indexed _operator, bool _isApproved);
 
     /** External Functions **/
 
@@ -107,11 +102,7 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
     /// @param _approved The approval status.
-    function setRoleApprovalForAll(
-        address _tokenAddress,
-        address _operator,
-        bool _approved
-    ) external;
+    function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external;
 
     /** View Functions **/
 
@@ -127,11 +118,7 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
-    function isRoleApprovedForAll(
-        address _tokenAddress,
-        address _grantor,
-        address _operator
-    ) external view returns (bool);
+    function isRoleApprovedForAll(address _tokenAddress, address _grantor, address _operator) external view returns (bool);
 
     /// @notice Calculates the amount of ERC-1155 tokens delegated to the specified _grantee.
     /// @param _role The role identifier.
@@ -139,9 +126,6 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenId The token identifier.
     /// @param _grantee The user that received the role.
     function roleBalanceOf(
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _grantee
+        bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantee
     ) external view returns (uint256 balance_);
 }
