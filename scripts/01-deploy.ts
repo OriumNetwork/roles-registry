@@ -1,6 +1,7 @@
 import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
 import { DeployAddresses } from '../config'
+import { keccak256 } from 'ethers/lib/utils'
 
 const kmsCredentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AKIAxxxxxxxxxxxxxxxx', // credentials for your IAM user with KMS access
@@ -29,9 +30,16 @@ async function main() {
 
   const bytecode = ContractFactory.bytecode
   const salt = '0x00000000000000000000000000000000000000008b99e5a778edb02572010000'
-  const tx = await create2Factory.deploy(salt, bytecode)
 
+  const computedAddress = await create2Factory.computeAddress(salt, keccak256(bytecode))
+  console.log(`${CONTRACT_NAME} will be deployed at: ${computedAddress}`)
+
+  const tx = await create2Factory.deploy(salt, bytecode)
   console.log(`${CONTRACT_NAME} deployment txHash: ${tx.hash}`)
+
+  await tx.wait()
+
+  console.log(`${CONTRACT_NAME} deployed at: ${computedAddress}`)
 }
 
 main()
