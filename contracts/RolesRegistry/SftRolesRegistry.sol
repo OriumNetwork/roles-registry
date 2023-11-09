@@ -8,14 +8,12 @@ import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import { LinkedLists } from "./libraries/LinkedLists.sol";
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     using LinkedLists for LinkedLists.Lists;
     using LinkedLists for LinkedLists.ListItem;
-    using EnumerableSet for EnumerableSet.UintSet;
 
     LinkedLists.Lists internal lists;
 

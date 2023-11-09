@@ -30,17 +30,31 @@ library LinkedLists {
 
         uint256 headerNonce = _self.headers[_headerKey];
         if (headerNonce == EMPTY) {
+            // if list is empty
             // insert as header
             _self.headers[_headerKey] = _nonce;
             _self.items[_nonce] = ListItem(_data, EMPTY, EMPTY);
-        } else {
-            // search where to insert
-            uint256 currentNonce = headerNonce;
-            while (_data.expirationDate < _self.items[currentNonce].data.expirationDate) {
-                currentNonce = _self.items[currentNonce].next;
-            }
-            insertAt(_self, currentNonce, _nonce, _data);
+            return;
         }
+
+        if (_data.expirationDate > _self.items[headerNonce].data.expirationDate) {
+            // if expirationDate is greater than head's expirationDate
+            // update current head
+            _self.items[headerNonce].previous = _nonce;
+
+            // insert as header
+            _self.headers[_headerKey] = _nonce;
+            _self.items[_nonce] = ListItem(_data, EMPTY, headerNonce);
+            return;
+        }
+
+        // search where to insert
+        uint256 currentNonce = headerNonce;
+        while (_data.expirationDate < _self.items[currentNonce].data.expirationDate && _self.items[currentNonce].next != EMPTY) {
+            currentNonce = _self.items[currentNonce].next;
+        }
+        insertAt(_self, currentNonce, _nonce, _data);
+
     }
 
     function insertAt(Lists storage _self, uint256 _previousNonce, uint256 _dataNonce, IERCXXXX.RoleData memory _data) internal {
