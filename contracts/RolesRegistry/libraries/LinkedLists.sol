@@ -23,8 +23,6 @@ library LinkedLists {
         uint256 next;
     }
 
-    // Insert =================================================================
-
     function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
         require(_nonce != EMPTY, "LinkedLists: invalid nonce");
 
@@ -54,10 +52,10 @@ library LinkedLists {
         while (_self.items[currentNonce].next != EMPTY && _data.expirationDate < _self.items[_self.items[currentNonce].next].data.expirationDate) {
             currentNonce = _self.items[currentNonce].next;
         }
-        insertAt(_self, currentNonce, _nonce, _data);
+        _insertAt(_self, currentNonce, _nonce, _data);
     }
 
-    function insertAt(Lists storage _self, uint256 _previousNonce, uint256 _dataNonce, IERCXXXX.RoleData memory _data) internal {
+    function _insertAt(Lists storage _self, uint256 _previousNonce, uint256 _dataNonce, IERCXXXX.RoleData memory _data) internal {
         ListItem storage previousItem = _self.items[_previousNonce];
         if (previousItem.next == EMPTY) {
             // insert as last item
@@ -72,11 +70,9 @@ library LinkedLists {
         previousItem.next = _dataNonce;
     }
 
-    // Remove =================================================================
-
     function remove(Lists storage _self, bytes32 _headKey, uint256 _nonce) internal {
         uint256 headNonce = _self.heads[_headKey];
-        require(headNonce != EMPTY || _nonce != EMPTY, "LinkedLists: empty list or invalid nonce");
+        require(headNonce != EMPTY && _self.items[_nonce].data.expirationDate != 0, "LinkedLists: empty list or invalid nonce");
 
         if (headNonce == _nonce) {
             // remove head
@@ -85,11 +81,11 @@ library LinkedLists {
                 delete _self.heads[_headKey];
             } else {
                 // list contains more than one item
-                ListItem storage newHead = _self.items[headNonce];
-                // remove previous item of new head
-                newHead.previous = EMPTY;
                 // set new head
-                _self.heads[_headKey] = _self.items[_nonce].next;
+                uint256 newHeadNonce = _self.items[_nonce].next;
+                _self.heads[_headKey] = newHeadNonce;
+                // remove previous item of new head
+                _self.items[newHeadNonce].previous = EMPTY;
             }
         } else {
             // remove non-head item

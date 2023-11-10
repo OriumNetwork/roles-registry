@@ -122,8 +122,61 @@ describe('LinkedLists', async () => {
         await assertListItem(LinkedLists, HashZero, SecondItem.nonce, SecondItem.expirationDate, 2)
         await assertList(LinkedLists, HashZero, 3)
       })
+    })
+  })
 
+  describe('Remove Item', async () => {
+    it('when list is empty, should revert', async () => {
+      await expect(LinkedLists.remove(HashZero, 1)).to.revertedWith('LinkedLists: empty list or invalid nonce')
     })
 
+    it('should remove the only item on the list', async () => {
+      const HeadItem = { expirationDate: 30, nonce: generateRandomInt() }
+      await expect(LinkedLists.insert(HashZero, HeadItem.nonce, HeadItem.expirationDate)).to.not.be.reverted
+      await expect(LinkedLists.remove(HashZero, HeadItem.nonce)).to.not.be.reverted
+      await assertList(LinkedLists, HashZero, 0)
+    })
+
+    describe('List with three items', async () => {
+      let HeadItem: { nonce: number; expirationDate: number }
+      let MiddleItem: { nonce: number; expirationDate: number }
+      let TailItem: { nonce: number; expirationDate: number }
+
+      beforeEach(async () => {
+        HeadItem = { expirationDate: 30, nonce: generateRandomInt() }
+        MiddleItem = { expirationDate: 20, nonce: generateRandomInt() }
+        TailItem = { expirationDate: 10, nonce: generateRandomInt() }
+        await expect(LinkedLists.insert(HashZero, HeadItem.nonce, HeadItem.expirationDate)).to.not.be.reverted
+        await expect(LinkedLists.insert(HashZero, MiddleItem.nonce, MiddleItem.expirationDate)).to.not.be.reverted
+        await expect(LinkedLists.insert(HashZero, TailItem.nonce, TailItem.expirationDate)).to.not.be.reverted
+      })
+
+      it('when invalid nonce, should revert', async () => {
+        await expect(LinkedLists.remove(HashZero, generateRandomInt())).to.revertedWith(
+          'LinkedLists: empty list or invalid nonce',
+        )
+      })
+
+      it('should remove head', async () => {
+        await expect(LinkedLists.remove(HashZero, HeadItem.nonce)).to.not.be.reverted
+        await assertListItem(LinkedLists, HashZero, MiddleItem.nonce, MiddleItem.expirationDate, 0)
+        await assertListItem(LinkedLists, HashZero, TailItem.nonce, TailItem.expirationDate, 1)
+        await assertList(LinkedLists, HashZero, 2)
+      })
+
+      it('should remove middle item', async () => {
+        await expect(LinkedLists.remove(HashZero, MiddleItem.nonce)).to.not.be.reverted
+        await assertListItem(LinkedLists, HashZero, HeadItem.nonce, HeadItem.expirationDate, 0)
+        await assertListItem(LinkedLists, HashZero, TailItem.nonce, TailItem.expirationDate, 1)
+        await assertList(LinkedLists, HashZero, 2)
+      })
+
+      it('should remove tail', async () => {
+        await expect(LinkedLists.remove(HashZero, TailItem.nonce)).to.not.be.reverted
+        await assertListItem(LinkedLists, HashZero, HeadItem.nonce, HeadItem.expirationDate, 0)
+        await assertListItem(LinkedLists, HashZero, MiddleItem.nonce, MiddleItem.expirationDate, 1)
+        await assertList(LinkedLists, HashZero, 2)
+      })
+    })
   })
 })
