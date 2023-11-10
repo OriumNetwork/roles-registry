@@ -37,10 +37,11 @@ library LinkedLists {
             return;
         }
 
-        if (_data.expirationDate > _self.items[headNonce].data.expirationDate) {
+        ListItem storage headItem = _self.items[headNonce];
+        if (_data.expirationDate > headItem.data.expirationDate) {
             // if expirationDate is greater than head's expirationDate
             // update current head
-            _self.items[headNonce].previous = _nonce;
+            headItem.previous = _nonce;
 
             // insert as head
             _self.heads[_headKey] = _nonce;
@@ -50,11 +51,10 @@ library LinkedLists {
 
         // search where to insert
         uint256 currentNonce = headNonce;
-        while (_data.expirationDate < _self.items[currentNonce].data.expirationDate && _self.items[currentNonce].next != EMPTY) {
+        while (_self.items[currentNonce].next != EMPTY && _data.expirationDate < _self.items[_self.items[currentNonce].next].data.expirationDate) {
             currentNonce = _self.items[currentNonce].next;
         }
         insertAt(_self, currentNonce, _nonce, _data);
-
     }
 
     function insertAt(Lists storage _self, uint256 _previousNonce, uint256 _dataNonce, IERCXXXX.RoleData memory _data) internal {

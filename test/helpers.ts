@@ -15,7 +15,7 @@ export async function assertList(LinkedLists: Contract, listId: string, expected
 
   // assert head
   let item = await LinkedLists.getListItem(headNonce)
-  expect(item.previous, 'Header previous should be zero').to.be.equal(0)
+  expect(item.previous, 'Head previous should be zero').to.be.equal(0)
 
   let previous = headNonce.toNumber()
   let previousExpirationDate = item.expirationDate.toNumber()
@@ -66,22 +66,27 @@ export async function assertListItem(
   )
 
   if (expectedPosition === 0) {
-    // if item is the header
-    expect(await LinkedLists.getHeadNonce(listId), `Item ${itemNonce} should be the header`).to.equal(itemNonce)
-    return expect(previous, 'Header previous should be zero').to.be.equal(0)
+    // if item is the head
+    expect(await LinkedLists.getHeadNonce(listId), `Item ${itemNonce} should be the head`).to.equal(itemNonce)
+    return expect(previous, 'Head previous should be zero').to.be.equal(0)
   }
 
-  // if item is not the header
+  // if item is not the head
   expect(previous, 'Item previous should not be zero').to.not.be.equal(0)
 
   // assert position
   let position = 0
+  let currentNonce = (await LinkedLists.getHeadNonce(listId)).toNumber()
   let item = await LinkedLists.getListHead(listId)
-  while (item.next.toNumber() !== 0) {
-    item = await LinkedLists.getListItem(item.next)
+  while (currentNonce !== 0) {
+    if (currentNonce === itemNonce) {
+      return expect(position, 'Item is not on expected position').to.be.equal(expectedPosition)
+    }
+    item = await LinkedLists.getListItem(currentNonce)
+    currentNonce = item.next.toNumber()
     position += 1
   }
-  expect(position, 'Item is not on expected position').to.be.equal(expectedPosition)
+  expect.fail('Item not found in list')
 }
 
 export async function printList(LinkedLists: Contract, listId: string) {

@@ -78,5 +78,52 @@ describe('LinkedLists', async () => {
         await assertList(LinkedLists, HashZero, 2)
       })
     })
+
+    describe('List with two items', async () => {
+      let FirstItem: { nonce: number; expirationDate: number }
+      let SecondItem: { nonce: number; expirationDate: number }
+
+      beforeEach(async () => {
+        FirstItem = { expirationDate: 20, nonce: generateRandomInt() }
+        SecondItem = { expirationDate: 10, nonce: generateRandomInt() }
+        await expect(LinkedLists.insert(HashZero, FirstItem.nonce, FirstItem.expirationDate)).to.not.be.reverted
+        await expect(LinkedLists.insert(HashZero, SecondItem.nonce, SecondItem.expirationDate)).to.not.be.reverted
+      })
+
+      it('when expiration date is greater, insert item as head', async () => {
+        const newNonce = generateRandomInt()
+        const newDate = 30
+        await expect(LinkedLists.insert(HashZero, newNonce, newDate)).to.not.be.reverted
+
+        await assertListItem(LinkedLists, HashZero, newNonce, newDate, 0)
+        await assertListItem(LinkedLists, HashZero, FirstItem.nonce, FirstItem.expirationDate, 1)
+        await assertListItem(LinkedLists, HashZero, SecondItem.nonce, SecondItem.expirationDate, 2)
+        await assertList(LinkedLists, HashZero, 3)
+      })
+
+      it('when expiration date is lower, insert item as tail', async () => {
+        const newNonce = generateRandomInt()
+        const newDate = 1
+        await expect(LinkedLists.insert(HashZero, newNonce, newDate)).to.not.be.reverted
+
+        await assertListItem(LinkedLists, HashZero, newNonce, newDate, 2)
+        await assertListItem(LinkedLists, HashZero, FirstItem.nonce, FirstItem.expirationDate, 0)
+        await assertListItem(LinkedLists, HashZero, SecondItem.nonce, SecondItem.expirationDate, 1)
+        await assertList(LinkedLists, HashZero, 3)
+      })
+
+      it('when expiration date is greater than on item but lower than another, insert item in the middle', async () => {
+        const newNonce = generateRandomInt()
+        const newDate = 15
+        await expect(LinkedLists.insert(HashZero, newNonce, newDate)).to.not.be.reverted
+
+        await assertListItem(LinkedLists, HashZero, newNonce, newDate, 1)
+        await assertListItem(LinkedLists, HashZero, FirstItem.nonce, FirstItem.expirationDate, 0)
+        await assertListItem(LinkedLists, HashZero, SecondItem.nonce, SecondItem.expirationDate, 2)
+        await assertList(LinkedLists, HashZero, 3)
+      })
+
+    })
+
   })
 })
