@@ -93,7 +93,8 @@ export async function printList(LinkedLists: Contract, listId: string) {
   console.log('\n== List ==============================================')
   const headNonce = (await LinkedLists.getHeadNonce(listId)).toNumber()
   if (headNonce === 0) {
-    return console.log('\tList is empty!')
+    console.log('\tList is empty!')
+    return console.log('== End of List =======================================\n')
   }
 
   let position = 0

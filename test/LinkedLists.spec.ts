@@ -3,10 +3,13 @@ import { ethers } from 'hardhat'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
 import { beforeEach } from 'mocha'
-import { generateRandomInt, assertListItem, assertList } from './helpers'
-const { HashZero } = ethers.constants
+import { generateRandomInt, assertListItem, assertList, printList } from './helpers'
 
-describe('LinkedLists', async () => {
+const { HashZero } = ethers.constants
+const HashOne = ethers.utils.formatBytes32String("1")
+const HashTwo = ethers.utils.formatBytes32String("2")
+
+describe.only('LinkedLists', async () => {
   let LinkedLists: Contract
 
   async function deployContracts() {
@@ -20,17 +23,6 @@ describe('LinkedLists', async () => {
   })
 
   describe('Insert Item', async () => {
-    it('when nonce is zero, should revert', async () => {
-      await expect(LinkedLists.insert(HashZero, 0, 1)).to.revertedWith('LinkedLists: invalid nonce')
-    })
-
-    it('when list is empty, insert item as head', async () => {
-      const nonce = generateRandomInt()
-      const expirationDate = 1
-      await expect(LinkedLists.insert(HashZero, nonce, expirationDate)).to.not.be.reverted
-      await assertListItem(LinkedLists, HashZero, nonce, expirationDate, 0)
-      await assertList(LinkedLists, HashZero, 1)
-    })
 
     describe('List with one item', async () => {
       let FirstItem: { nonce: number; expirationDate: number }
@@ -126,8 +118,16 @@ describe('LinkedLists', async () => {
   })
 
   describe('Remove Item', async () => {
+
     it('when list is empty, should revert', async () => {
       await expect(LinkedLists.remove(HashZero, 1)).to.revertedWith('LinkedLists: empty list or invalid nonce')
+    })
+
+    it('should revert if attempt to remove a nonce of a different list', async () => {
+      const HeadItem = { expirationDate: generateRandomInt(), nonce: generateRandomInt() }
+      await expect(LinkedLists.insert(HashZero, HeadItem.nonce, HeadItem.expirationDate)).to.not.be.reverted
+      await expect(LinkedLists.insert(HashOne, generateRandomInt(), generateRandomInt())).to.not.be.reverted
+      await expect(LinkedLists.remove(HashOne, HeadItem.nonce)).to.revertedWith('LinkedLists: invalid headKey provided')
     })
 
     it('should remove the only item on the list', async () => {
@@ -179,4 +179,61 @@ describe('LinkedLists', async () => {
       })
     })
   })
+
+  it('when nonce is zero, should revert', async () => {
+    await expect(LinkedLists.insert(HashZero, 0, 1)).to.revertedWith('LinkedLists: invalid nonce')
+  })
+
+  it('when list is empty, insert item as head', async () => {
+    const nonce = generateRandomInt()
+    const expirationDate = 1
+    await expect(LinkedLists.insert(HashZero, nonce, expirationDate)).to.not.be.reverted
+    await assertListItem(LinkedLists, HashZero, nonce, expirationDate, 0)
+    await assertList(LinkedLists, HashZero, 1)
+  })
+
+  it('make sure lists do not interfere with each other', async () => {
+    // insert 3 items in each list
+    const maxSize = 3
+    for (let i = 1; i < maxSize + 1; i++) {
+      await expect(LinkedLists.insert(HashZero, i, i)).to.not.be.reverted
+      await expect(LinkedLists.insert(HashOne, i * 10, i)).to.not.be.reverted
+      await expect(LinkedLists.insert(HashTwo, i * 100, i)).to.not.be.reverted
+
+      await assertList(LinkedLists, HashZero, i)
+      await assertList(LinkedLists, HashOne, i)
+      await assertList(LinkedLists, HashTwo, i)
+    }
+
+    // remove all items from the list
+    for (let i = 1; i < maxSize + 1; i++) {
+      await expect(LinkedLists.remove(HashZero, i)).to.not.be.reverted
+      await expect(LinkedLists.remove(HashOne, i * 10)).to.not.be.reverted
+      await expect(LinkedLists.remove(HashTwo, i * 100)).to.not.be.reverted
+
+      await assertList(LinkedLists, HashZero, maxSize - i)
+      await assertList(LinkedLists, HashOne, maxSize - i)
+      await assertList(LinkedLists, HashTwo, maxSize - i)
+    }
+
+    // assert that lists are empty
+    await assertList(LinkedLists, HashZero, 0)
+    await assertList(LinkedLists, HashOne, 0)
+    await assertList(LinkedLists, HashTwo, 0)
+
+  })
+
+  it('should insert and remove 1,000 items @skip-on-coverage', async () => {
+    const size = 1000
+    for (let i = 1; i <= size; i++) {
+      await expect(LinkedLists.insert(HashZero, i, i)).to.not.be.reverted
+    }
+    await assertList(LinkedLists, HashZero, size)
+
+    for (let i = 1; i <= size; i++) {
+      await expect(LinkedLists.remove(HashZero, i)).to.not.be.reverted
+    }
+    await assertList(LinkedLists, HashZero, 0)
+  })
+
 })

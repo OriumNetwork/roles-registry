@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { IERCXXXX } from "../interfaces/IERCXXXX.sol";
 
-/// LinkedListsLib allow developers to manage multiple linked lists at once.
+/// LinkedLists allow developers to manage multiple linked lists at once.
 /// all lists are identified by a head key (bytes32)
 /// each list item is identified by a nonce
 /// the list is sorted by the expiration date in decreasing order
@@ -74,7 +74,11 @@ library LinkedLists {
         uint256 headNonce = _self.heads[_headKey];
         require(headNonce != EMPTY && _self.items[_nonce].data.expirationDate != 0, "LinkedLists: empty list or invalid nonce");
 
-        if (headNonce == _nonce) {
+        // only the head has previous as empty
+        if (_self.items[_nonce].previous == EMPTY) {
+            // if item is the head
+            // check if correct headKey was provided
+            require(headNonce == _nonce, "LinkedLists: invalid headKey provided");
             // remove head
             if (_self.items[_nonce].next == EMPTY) {
                 // list contains only one item
