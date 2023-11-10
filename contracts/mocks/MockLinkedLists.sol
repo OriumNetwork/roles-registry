@@ -28,7 +28,7 @@ contract MockLinkedLists {
     }
 
     function getHeadNonce(bytes32 _headKey) external view returns (uint256) {
-        return lists.headers[_headKey];
+        return lists.heads[_headKey];
     }
 
     function getListItem(uint256 _nonce) public view returns (ListItem memory) {
@@ -37,7 +37,7 @@ contract MockLinkedLists {
     }
 
     function getListHead(bytes32 _headKey) external view returns (ListItem memory) {
-        uint256 nonce = lists.headers[_headKey];
+        uint256 nonce = lists.heads[_headKey];
         return getListItem(nonce);
     }
 }

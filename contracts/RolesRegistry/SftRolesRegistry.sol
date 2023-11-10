@@ -56,9 +56,9 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.grantor
         );
 
-        bytes32 rootKey = _getHeaderKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
-        uint256 headerNonce = lists.headers[rootKey];
-        LinkedLists.ListItem storage item = lists.items[headerNonce];
+        bytes32 rootKey = _getHeadKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
+        uint256 headNonce = lists.heads[rootKey];
+        LinkedLists.ListItem storage item = lists.items[headNonce];
         if (item.data.expirationDate == 0) {
             // nonce is not being used
 
@@ -141,7 +141,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             item.data.tokenAmount
         );
 
-        bytes32 rootKey = _getHeaderKey(_revokeRoleData.grantee, _revokeRoleData.role, _revokeRoleData.tokenAddress, _revokeRoleData.tokenId);
+        bytes32 rootKey = _getHeadKey(_revokeRoleData.grantee, _revokeRoleData.role, _revokeRoleData.tokenAddress, _revokeRoleData.tokenId);
 
         // remove from the list
         lists.remove(rootKey, _revokeRoleData.nonce);
@@ -176,8 +176,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         uint256 _tokenId,
         address _grantee
     ) external view returns (uint256 balance_) {
-        bytes32 rootKey = _getHeaderKey(_grantee, _role, _tokenAddress, _tokenId);
-        uint256 currentNonce = lists.headers[rootKey];
+        bytes32 rootKey = _getHeadKey(_grantee, _role, _tokenAddress, _tokenId);
+        uint256 currentNonce = lists.heads[rootKey];
         if (currentNonce == 0) {
             return 0;
         }
@@ -248,7 +248,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         revert("RolesRegistry: sender must be approved");
     }
 
-    function _getHeaderKey(
+    function _getHeadKey(
         address _grantee, bytes32 _role, address _tokenAddress, uint256 _tokenId
     ) internal pure returns (bytes32 rootKey_) {
         return keccak256(abi.encodePacked(_grantee, _role, _tokenAddress, _tokenId));

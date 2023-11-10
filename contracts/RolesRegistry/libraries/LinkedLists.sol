@@ -5,7 +5,7 @@ pragma solidity 0.8.9;
 import { IERCXXXX } from "../interfaces/IERCXXXX.sol";
 
 /// LinkedListsLib allow developers to manage multiple linked lists at once.
-/// all lists are identified by a header key (bytes32)
+/// all lists are identified by a head key (bytes32)
 /// each list item is identified by a nonce
 /// the list is sorted by the expiration date in decreasing order
 library LinkedLists {
@@ -13,7 +13,7 @@ library LinkedLists {
     uint256 public constant EMPTY = 0;
 
     struct Lists {
-        mapping(bytes32 => uint256) headers;
+        mapping(bytes32 => uint256) heads;
         mapping(uint256 => ListItem) items;
     }
 
@@ -25,31 +25,31 @@ library LinkedLists {
 
     // Insert =================================================================
 
-    function insert(Lists storage _self, bytes32 _headerKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
+    function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
         require(_nonce != EMPTY, "LinkedLists: invalid nonce");
 
-        uint256 headerNonce = _self.headers[_headerKey];
-        if (headerNonce == EMPTY) {
+        uint256 headNonce = _self.heads[_headKey];
+        if (headNonce == EMPTY) {
             // if list is empty
-            // insert as header
-            _self.headers[_headerKey] = _nonce;
+            // insert as head
+            _self.heads[_headKey] = _nonce;
             _self.items[_nonce] = ListItem(_data, EMPTY, EMPTY);
             return;
         }
 
-        if (_data.expirationDate > _self.items[headerNonce].data.expirationDate) {
+        if (_data.expirationDate > _self.items[headNonce].data.expirationDate) {
             // if expirationDate is greater than head's expirationDate
             // update current head
-            _self.items[headerNonce].previous = _nonce;
+            _self.items[headNonce].previous = _nonce;
 
-            // insert as header
-            _self.headers[_headerKey] = _nonce;
-            _self.items[_nonce] = ListItem(_data, EMPTY, headerNonce);
+            // insert as head
+            _self.heads[_headKey] = _nonce;
+            _self.items[_nonce] = ListItem(_data, EMPTY, headNonce);
             return;
         }
 
         // search where to insert
-        uint256 currentNonce = headerNonce;
+        uint256 currentNonce = headNonce;
         while (_data.expirationDate < _self.items[currentNonce].data.expirationDate && _self.items[currentNonce].next != EMPTY) {
             currentNonce = _self.items[currentNonce].next;
         }
@@ -74,25 +74,25 @@ library LinkedLists {
 
     // Remove =================================================================
 
-    function remove(Lists storage _self, bytes32 _headerKey, uint256 _nonce) internal {
-        uint256 headerNonce = _self.headers[_headerKey];
-        require(headerNonce != EMPTY || _nonce != EMPTY, "LinkedLists: empty list or invalid nonce");
+    function remove(Lists storage _self, bytes32 _headKey, uint256 _nonce) internal {
+        uint256 headNonce = _self.heads[_headKey];
+        require(headNonce != EMPTY || _nonce != EMPTY, "LinkedLists: empty list or invalid nonce");
 
-        if (headerNonce == _nonce) {
-            // remove header
+        if (headNonce == _nonce) {
+            // remove head
             if (_self.items[_nonce].next == EMPTY) {
                 // list contains only one item
-                delete _self.headers[_headerKey];
+                delete _self.heads[_headKey];
             } else {
                 // list contains more than one item
-                ListItem storage newHeader = _self.items[headerNonce];
-                // remove previous item of new header
-                newHeader.previous = EMPTY;
-                // set new header
-                _self.headers[_headerKey] = _self.items[_nonce].next;
+                ListItem storage newHead = _self.items[headNonce];
+                // remove previous item of new head
+                newHead.previous = EMPTY;
+                // set new head
+                _self.heads[_headKey] = _self.items[_nonce].next;
             }
         } else {
-            // remove non-header item
+            // remove non-head item
             ListItem storage itemToRemove = _self.items[_nonce];
             // update previous item
             _self.items[itemToRemove.previous].next = itemToRemove.next;
