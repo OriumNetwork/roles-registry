@@ -3,13 +3,13 @@ import { ethers } from 'hardhat'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { expect } from 'chai'
 import { beforeEach } from 'mocha'
-import { generateRandomInt, assertListItem, assertList, printList } from './helpers'
+import { generateRandomInt, assertListItem, assertList } from './helpers'
 
 const { HashZero } = ethers.constants
 const HashOne = ethers.utils.formatBytes32String("1")
 const HashTwo = ethers.utils.formatBytes32String("2")
 
-describe.only('LinkedLists', async () => {
+describe('LinkedLists', async () => {
   let LinkedLists: Contract
 
   async function deployContracts() {

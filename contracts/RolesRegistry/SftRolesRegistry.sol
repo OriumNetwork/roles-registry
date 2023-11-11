@@ -26,10 +26,14 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     }
 
     modifier onlyOwnerOrApprovedWithBalance(address _account, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) {
+        require(_tokenAmount > 0, "SftRolesRegistry: tokenAmount must be greater than zero");
         require(
-            (_account == msg.sender || IERC1155(_tokenAddress).isApprovedForAll(_account, msg.sender)) &&
-                IERC1155(_tokenAddress).balanceOf(_account, _tokenId) >= _tokenAmount,
-            "SftRolesRegistry: account not approved or has insufficient balance"
+            _account == msg.sender || IERC1155(_tokenAddress).isApprovedForAll(_account, msg.sender),
+            "SftRolesRegistry: account not approved"
+        );
+        require(
+            IERC1155(_tokenAddress).balanceOf(_account, _tokenId) >= _tokenAmount,
+            "SftRolesRegistry: account has insufficient balance"
         );
         _;
     }
@@ -40,13 +44,13 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         external
         override
         validExpirationDate(_roleAssignment.expirationDate)
+        onlyOwnerOrApprovedWithBalance(
+            _roleAssignment.grantor,
+            _roleAssignment.tokenAddress,
+            _roleAssignment.tokenId,
+            _roleAssignment.tokenAmount
+        )
     {
-
-        require(
-            _roleAssignment.grantor == msg.sender ||
-            IERC1155(_roleAssignment.tokenAddress).isApprovedForAll(_roleAssignment.grantor, msg.sender),
-            "SftRolesRegistry: account not approved"
-        );
 
         bytes32 hash = _hashRoleData(
             _roleAssignment.nonce,
@@ -95,7 +99,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
         // insert on the list
         _insert(hash, rootKey, _roleAssignment);
-
     }
 
     function _insert(bytes32 _hash, bytes32 _rootKey, RoleAssignment calldata _roleAssignment) internal {
