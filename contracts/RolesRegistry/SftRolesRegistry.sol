@@ -28,12 +28,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     modifier onlyOwnerOrApprovedWithBalance(address _account, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) {
         require(_tokenAmount > 0, "SftRolesRegistry: tokenAmount must be greater than zero");
         require(
-            _account == msg.sender || IERC1155(_tokenAddress).isApprovedForAll(_account, msg.sender),
+            _account == msg.sender || isRoleApprovedForAll(_tokenAddress, _account, msg.sender),
             "SftRolesRegistry: account not approved"
-        );
-        require(
-            IERC1155(_tokenAddress).balanceOf(_account, _tokenId) >= _tokenAmount,
-            "SftRolesRegistry: account has insufficient balance"
         );
         _;
     }
@@ -61,8 +57,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         );
 
         bytes32 rootKey = _getHeadKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
-        uint256 headNonce = lists.heads[rootKey];
-        LinkedLists.ListItem storage item = lists.items[headNonce];
+        LinkedLists.ListItem storage item = lists.items[_roleAssignment.nonce];
         if (item.data.expirationDate == 0) {
             // nonce is not being used
 
@@ -78,27 +73,52 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             // nonce is being used
             require(item.data.hash == hash, "SftRolesRegistry: nonce exist, but data mismatch"); // validates nonce, role, tokenAddress, tokenId, grantor
             require(item.data.expirationDate < block.timestamp || item.data.revocable, "SftRolesRegistry: nonce is not expired or is not revocable");
-            require(item.data.tokenAmount >= _roleAssignment.tokenAmount, "SftRolesRegistry: insufficient tokenAmount in nonce");
 
-            // return tokens if any
-            uint256 tokensToReturn = item.data.tokenAmount - _roleAssignment.tokenAmount;
-            if (tokensToReturn > 0) {
-                _transferFrom(
-                    address(this),
-                    _roleAssignment.grantor,
-                    _roleAssignment.tokenAddress,
-                    _roleAssignment.tokenId,
-                    tokensToReturn
-                );
-            }
+            // deposit or withdraw tokens
+            _depositOrWithdrawTokens(
+                _roleAssignment.tokenAddress,
+                _roleAssignment.tokenId,
+                _roleAssignment.grantor,
+                item.data.tokenAmount,
+                _roleAssignment.tokenAmount
+            );
 
             // remove from the list
             lists.remove(rootKey, _roleAssignment.nonce);
-
         }
 
         // insert on the list
         _insert(hash, rootKey, _roleAssignment);
+    }
+
+    function _depositOrWithdrawTokens(
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _account,
+        uint256 _depositedAmount,
+        uint256 _amountRequired
+    ) internal {
+        if (_depositedAmount > _amountRequired) {
+            // return leftover tokens
+            uint256 tokensToReturn = _depositedAmount - _amountRequired;
+            _transferFrom(
+                address(this),
+                _account,
+                _tokenAddress,
+                _tokenId,
+                tokensToReturn
+            );
+        } else if (_amountRequired > _depositedAmount) {
+            // deposit missing tokens
+            uint256 tokensToDeposit = _amountRequired - _depositedAmount;
+            _transferFrom(
+                _account,
+                address(this),
+                _tokenAddress,
+                _tokenId,
+                tokensToDeposit
+            );
+        }
     }
 
     function _insert(bytes32 _hash, bytes32 _rootKey, RoleAssignment calldata _roleAssignment) internal {

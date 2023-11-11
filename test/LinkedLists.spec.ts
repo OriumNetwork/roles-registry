@@ -6,8 +6,8 @@ import { beforeEach } from 'mocha'
 import { generateRandomInt, assertListItem, assertList } from './helpers'
 
 const { HashZero } = ethers.constants
-const HashOne = ethers.utils.formatBytes32String("1")
-const HashTwo = ethers.utils.formatBytes32String("2")
+const HashOne = ethers.utils.formatBytes32String('1')
+const HashTwo = ethers.utils.formatBytes32String('2')
 
 describe('LinkedLists', async () => {
   let LinkedLists: Contract
@@ -23,7 +23,6 @@ describe('LinkedLists', async () => {
   })
 
   describe('Insert Item', async () => {
-
     describe('List with one item', async () => {
       let FirstItem: { nonce: number; expirationDate: number }
 
@@ -118,7 +117,6 @@ describe('LinkedLists', async () => {
   })
 
   describe('Remove Item', async () => {
-
     it('when list is empty, should revert', async () => {
       await expect(LinkedLists.remove(HashZero, 1)).to.revertedWith('LinkedLists: empty list or invalid nonce')
     })
@@ -220,7 +218,6 @@ describe('LinkedLists', async () => {
     await assertList(LinkedLists, HashZero, 0)
     await assertList(LinkedLists, HashOne, 0)
     await assertList(LinkedLists, HashTwo, 0)
-
   })
 
   it('should insert and remove 1,000 items @skip-on-coverage', async () => {
@@ -235,5 +232,4 @@ describe('LinkedLists', async () => {
     }
     await assertList(LinkedLists, HashZero, 0)
   })
-
 })
