@@ -10,3 +10,12 @@ export interface RoleAssignment {
   revocable: boolean
   data: string
 }
+
+export interface RevokeRoleData {
+  nonce: number
+  role: string
+  tokenAddress: string
+  tokenId: number
+  revoker: string
+  grantee: string
+}

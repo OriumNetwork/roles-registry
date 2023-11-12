@@ -149,25 +149,37 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external override {
         LinkedLists.ListItem storage item = lists.items[_revokeRoleData.nonce];
-        require(item.data.hash == _hashRoleData(_revokeRoleData), "SftRolesRegistry: invalid revoke role data");
+        require(item.data.hash == _hashRoleData(_revokeRoleData), "SftRolesRegistry: could not find role assignment");
 
         address caller = _findCaller(_revokeRoleData);
-        if (!item.data.revocable) {
-            require(caller == _revokeRoleData.grantee, "SftRolesRegistry: Role is not revocable or caller is not the approved");
+        if (item.data.expirationDate > block.timestamp && !item.data.revocable) {
+            // if role is not expired and is not revocable, only the grantee can revoke it
+            require(caller == _revokeRoleData.grantee, "SftRolesRegistry: role is not revocable or caller is not the approved");
         }
 
+        uint256 tokensToReturn = item.data.tokenAmount;
         _transferFrom(
             address(this),
             _revokeRoleData.revoker,
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
-            item.data.tokenAmount
+            tokensToReturn
         );
 
         bytes32 rootKey = _getHeadKey(_revokeRoleData.grantee, _revokeRoleData.role, _revokeRoleData.tokenAddress, _revokeRoleData.tokenId);
 
         // remove from the list
         lists.remove(rootKey, _revokeRoleData.nonce);
+
+        emit RoleRevoked(
+            _revokeRoleData.nonce,
+            _revokeRoleData.role,
+            _revokeRoleData.tokenAddress,
+            _revokeRoleData.tokenId,
+            tokensToReturn,
+            _revokeRoleData.revoker,
+            _revokeRoleData.grantee
+        );
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
@@ -239,16 +251,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         );
     }
 
-    function _hashRoleData(RoleAssignment calldata _roleAssignment) internal pure returns (bytes32) {
-        return _hashRoleData(
-            _roleAssignment.nonce,
-            _roleAssignment.role,
-            _roleAssignment.tokenAddress,
-            _roleAssignment.tokenId,
-            _roleAssignment.grantor
-        );
-    }
-
     function _hashRoleData(
         uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor
     ) internal pure returns (bytes32) {
@@ -262,7 +264,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             return _revokeRoleData.revoker;
         }
 
-        if (_revokeRoleData.grantee == msg.sender ||
+        if (
+            _revokeRoleData.grantee == msg.sender ||
             isRoleApprovedForAll(_revokeRoleData.tokenAddress, _revokeRoleData.grantee, msg.sender)
         ) {
             return _revokeRoleData.grantee;

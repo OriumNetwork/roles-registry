@@ -1,5 +1,5 @@
 import { solidityKeccak256 } from 'ethers/lib/utils'
-import { RoleAssignment } from './types'
+import { RevokeRoleData, RoleAssignment } from './types'
 import { generateRandomInt } from '../helpers'
 import { ethers } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
@@ -43,6 +43,17 @@ export async function buildRoleAssignment({
     expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,
     revocable,
     data,
+  }
+}
+
+export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleData {
+  return {
+    nonce: roleAssignment.nonce,
+    role: roleAssignment.role,
+    tokenAddress: roleAssignment.tokenAddress,
+    tokenId: roleAssignment.tokenId,
+    revoker: roleAssignment.grantor,
+    grantee: roleAssignment.grantee,
   }
 }
 

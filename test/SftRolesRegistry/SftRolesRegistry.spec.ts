@@ -2,10 +2,11 @@ import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
 import { beforeEach } from 'mocha'
 import { expect } from 'chai'
+import { solidityKeccak256 } from 'ethers/lib/utils'
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, currentUnixTimestamp, ONE_DAY, generateRoleId } from './helpers'
-import { RoleAssignment } from './types'
+import { buildRoleAssignment, currentUnixTimestamp, ONE_DAY, generateRoleId, buildRevokeRoleData } from './helpers'
+import { RoleAssignment, RevokeRoleData } from './types'
 import { generateRandomInt } from '../helpers'
 
 const { AddressZero } = ethers.constants
@@ -14,6 +15,7 @@ describe('SftRolesRegistry', async () => {
   let SftRolesRegistry: Contract
   let MockToken: Contract
   let grantor: SignerWithAddress
+  let grantee: SignerWithAddress
   let anotherUser: SignerWithAddress
 
   async function deployContracts() {
@@ -23,7 +25,8 @@ describe('SftRolesRegistry', async () => {
     MockToken = await MockTokenFactory.deploy()
     const signers = await ethers.getSigners()
     grantor = signers[0]
-    anotherUser = signers[1]
+    grantee = signers[1]
+    anotherUser = signers[2]
     return { SftRolesRegistry, MockToken, signers }
   }
 
@@ -344,6 +347,190 @@ describe('SftRolesRegistry', async () => {
         )
         // should not transfer any tokens
         .to.not.emit(MockToken, 'TransferSingle')
+    })
+  })
+
+  describe('revokeRole', async () => {
+    let RoleAssignment: RoleAssignment
+    let RevokeRoleData: RevokeRoleData
+
+    beforeEach(async () => {
+      RoleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        grantee: grantee.address,
+      })
+      RevokeRoleData = buildRevokeRoleData(RoleAssignment)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
+    })
+
+    it('should revert when hash is invalid', async () => {
+      // hash validates nonce, role, tokenAddress, tokenId and revoker
+
+      // nonce
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom({
+          ...RevokeRoleData,
+          nonce: generateRandomInt(),
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
+
+      // role
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom({
+          ...RevokeRoleData,
+          role: solidityKeccak256(['string'], ['Role(uint256 newArg)']),
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
+
+      // tokenAddress
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom({
+          ...RevokeRoleData,
+          tokenAddress: AddressZero,
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
+
+      // tokenId
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom({
+          ...RevokeRoleData,
+          tokenId: generateRandomInt(),
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
+
+      // revoker
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom({
+          ...RevokeRoleData,
+          revoker: anotherUser.address,
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
+    })
+
+    it('should revert if nonce is not expired and is not revocable', async () => {
+      const newRoleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        revocable: false,
+      })
+
+      const newRevokeRoleData = buildRevokeRoleData(newRoleAssignment)
+      await MockToken.mint(newRoleAssignment.grantor, newRoleAssignment.tokenId, newRoleAssignment.tokenAmount)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment))
+
+      await expect(SftRolesRegistry.connect(grantor).revokeRoleFrom(newRevokeRoleData)).to.be.revertedWith(
+        'SftRolesRegistry: role is not revocable or caller is not the approved',
+      )
+    })
+
+    it('should revert if caller is not approved', async () => {
+      await expect(SftRolesRegistry.connect(anotherUser).revokeRoleFrom(RevokeRoleData)).to.be.revertedWith(
+        'SftRolesRegistry: sender must be approved',
+      )
+    })
+
+    it('should revoke role if sender is revoker', async () => {
+      await expect(SftRolesRegistry.connect(grantor).revokeRoleFrom(RevokeRoleData))
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.role,
+          RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+          RevokeRoleData.revoker,
+          RevokeRoleData.grantee,
+        )
+        // transfer tokens back to owner
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+        )
+    })
+
+    it('should revoke role if sender is approved by grantor', async () => {
+      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
+        RoleAssignment.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(SftRolesRegistry.connect(anotherUser).revokeRoleFrom(RevokeRoleData))
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.role,
+          RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+          RevokeRoleData.revoker,
+          RevokeRoleData.grantee,
+        )
+        // transfer tokens back to owner
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+        )
+    })
+    it('should revoke role if sender is approved by grantee', async () => {
+      await SftRolesRegistry.connect(grantee).setRoleApprovalForAll(
+        RoleAssignment.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(SftRolesRegistry.connect(anotherUser).revokeRoleFrom(RevokeRoleData))
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.role,
+          RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+          RevokeRoleData.revoker,
+          RevokeRoleData.grantee,
+        )
+        // transfer tokens back to owner
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+        )
+    })
+
+    it('should revoke role if sender is grantee', async () => {
+      await expect(SftRolesRegistry.connect(grantee).revokeRoleFrom(RevokeRoleData))
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.role,
+          RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+          RevokeRoleData.revoker,
+          RevokeRoleData.grantee,
+        )
+        // transfer tokens back to owner
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RoleAssignment.tokenAmount,
+        )
     })
   })
 })
