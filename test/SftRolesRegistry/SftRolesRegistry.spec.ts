@@ -533,4 +533,74 @@ describe('SftRolesRegistry', async () => {
         )
     })
   })
+
+  describe('setRoleApprovalForAll', async () => {
+    it('should approve and revoke approval', async () => {
+      expect(await SftRolesRegistry.isRoleApprovedForAll(AddressZero, grantor.address, anotherUser.address)).to.be.false
+      expect(await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(AddressZero, anotherUser.address, true))
+        .to.emit(SftRolesRegistry, 'RoleApprovalForAll')
+        .withArgs(AddressZero, grantor.address, anotherUser.address, true)
+      expect(await SftRolesRegistry.isRoleApprovedForAll(AddressZero, grantor.address, anotherUser.address)).to.be.true
+    })
+  })
+
+  describe('View Functions', async () => {
+    let RoleAssignment: RoleAssignment
+
+    beforeEach(async () => {
+      RoleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        grantee: grantee.address,
+      })
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
+    })
+
+    it('should return the role data', async () => {
+      const roleData = await SftRolesRegistry.roleData(RoleAssignment.nonce)
+      const hash = ethers.utils.defaultAbiCoder.encode(
+        ['uint256', 'bytes32', 'address', 'uint256', 'address'],
+        [
+          RoleAssignment.nonce,
+          RoleAssignment.role,
+          RoleAssignment.tokenAddress,
+          RoleAssignment.tokenId,
+          RoleAssignment.grantor,
+        ],
+      )
+      expect(roleData.hash).to.be.equal(ethers.utils.keccak256(hash))
+      expect(roleData.tokenAmount).to.be.equal(RoleAssignment.tokenAmount)
+      expect(roleData.expirationDate).to.be.equal(RoleAssignment.expirationDate)
+      expect(roleData.revocable).to.be.equal(RoleAssignment.revocable)
+      expect(roleData.data).to.be.equal(RoleAssignment.data)
+    })
+
+    it('should return the expiration date', async () => {
+      expect(await SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce)).to.be.equal(RoleAssignment.expirationDate)
+    })
+
+    it('should return balance zero if grantee has no roles', async () => {
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          RoleAssignment.role,
+          RoleAssignment.tokenAddress,
+          RoleAssignment.tokenId,
+          AddressZero,
+        ),
+      ).to.be.equal(0)
+    })
+
+    it("should return the grantee's balance of tokens", async () => {
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          RoleAssignment.role,
+          RoleAssignment.tokenAddress,
+          RoleAssignment.tokenId,
+          RoleAssignment.grantee,
+        ),
+      ).to.be.equal(RoleAssignment.tokenAmount)
+    })
+  })
 })
