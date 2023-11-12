@@ -60,7 +60,3 @@ export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleD
 export function generateRoleId(role: string) {
   return solidityKeccak256(['string'], [role])
 }
-
-export function currentUnixTimestamp() {
-  return Math.floor(Date.now() / 1000)
-}

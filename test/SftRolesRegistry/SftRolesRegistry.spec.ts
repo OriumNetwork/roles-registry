@@ -3,9 +3,9 @@ import { Contract } from 'ethers'
 import { beforeEach } from 'mocha'
 import { expect } from 'chai'
 import { solidityKeccak256 } from 'ethers/lib/utils'
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers'
+import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, currentUnixTimestamp, ONE_DAY, generateRoleId, buildRevokeRoleData } from './helpers'
+import { buildRoleAssignment, ONE_DAY, generateRoleId, buildRevokeRoleData } from './helpers'
 import { RoleAssignment, RevokeRoleData } from './types'
 import { generateRandomInt } from '../helpers'
 
@@ -42,7 +42,7 @@ describe('SftRolesRegistry', async () => {
 
     it('should revert if expirationDate is in the past', async () => {
       const roleAssignment = await buildRoleAssignment({
-        expirationDate: currentUnixTimestamp() - ONE_DAY,
+        expirationDate: (await time.latest()) - ONE_DAY,
       })
       await expect(SftRolesRegistry.grantRoleFrom(roleAssignment)).to.be.revertedWith(
         'SftRolesRegistry: expiration date must be in the future',

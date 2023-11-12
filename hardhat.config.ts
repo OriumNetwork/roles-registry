@@ -39,7 +39,7 @@ const BASE_CONFIG = {
     timeout: 840000,
   },
   gasReporter: {
-    enabled: false,
+    enabled: true,
     excludeContracts: ['contracts/test'],
     gasPrice: 100,
     token: 'MATIC',
