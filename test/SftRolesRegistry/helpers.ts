@@ -2,6 +2,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils'
 import { RevokeRoleData, RoleAssignment } from './types'
 import { generateRandomInt } from '../helpers'
 import { ethers } from 'hardhat'
+import { utils } from 'ethers'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const { HashZero, AddressZero } = ethers.constants
@@ -59,4 +60,13 @@ export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleD
 
 export function generateRoleId(role: string) {
   return solidityKeccak256(['string'], [role])
+}
+
+export function getInterfaceID(contractInterface: utils.Interface) {
+  let interfaceID = ethers.constants.Zero
+  const functions: string[] = Object.keys(contractInterface.functions)
+  for (let i = 0; i < functions.length; i++) {
+    interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
+  }
+  return interfaceID//._hex.padEnd(10, '0')
 }

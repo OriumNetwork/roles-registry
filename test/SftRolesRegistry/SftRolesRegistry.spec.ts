@@ -5,9 +5,10 @@ import { expect } from 'chai'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, ONE_DAY, generateRoleId, buildRevokeRoleData } from './helpers'
+import { buildRoleAssignment, ONE_DAY, generateRoleId, buildRevokeRoleData, getInterfaceID } from './helpers'
 import { RoleAssignment, RevokeRoleData } from './types'
 import { generateRandomInt } from '../helpers'
+import { IERCXXXX__factory } from '../../typechain-types'
 
 const { AddressZero } = ethers.constants
 
@@ -603,4 +604,20 @@ describe('SftRolesRegistry', async () => {
       ).to.be.equal(RoleAssignment.tokenAmount)
     })
   })
+
+  describe('ERC-165 supportsInterface', async () => {
+
+    it('should return true if ERC1155Receiver interface id', async () => {
+      expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
+    })
+
+    // todo validate SftRolesRegistry is supported
+    // it('should return true if SftRolesRegistry interface id', async () => {
+    //   const id = getInterfaceID(IERCXXXX__factory.createInterface())
+    //   console.log('id', id)
+    //   expect(await SftRolesRegistry.supportsInterface(id)).to.be.true
+    // })
+
+  })
+
 })
