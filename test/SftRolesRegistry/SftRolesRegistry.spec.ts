@@ -606,7 +606,6 @@ describe('SftRolesRegistry', async () => {
   })
 
   describe('ERC-165 supportsInterface', async () => {
-
     it('should return true if ERC1155Receiver interface id', async () => {
       expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
     })
@@ -617,7 +616,5 @@ describe('SftRolesRegistry', async () => {
     //   console.log('id', id)
     //   expect(await SftRolesRegistry.supportsInterface(id)).to.be.true
     // })
-
   })
-
 })

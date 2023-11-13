@@ -68,5 +68,5 @@ export function getInterfaceID(contractInterface: utils.Interface) {
   for (let i = 0; i < functions.length; i++) {
     interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
   }
-  return interfaceID//._hex.padEnd(10, '0')
+  return interfaceID
 }
