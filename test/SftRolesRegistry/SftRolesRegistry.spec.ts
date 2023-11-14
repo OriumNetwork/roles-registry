@@ -255,6 +255,49 @@ describe('SftRolesRegistry', async () => {
       )
     })
 
+    it('should NOT revert if nonce is expired', async () => {
+      const roleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        revocable: false,
+      })
+
+      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
+        .to.emit(SftRolesRegistry, 'RoleGranted')
+        .withArgs(
+          roleAssignment.nonce,
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.tokenAmount,
+          roleAssignment.grantor,
+          roleAssignment.grantee,
+          roleAssignment.expirationDate,
+          roleAssignment.revocable,
+          roleAssignment.data,
+        )
+
+      // increase time in 1 day
+      await time.increase(ONE_DAY + 1)
+      roleAssignment.expirationDate = (await time.latest()) + ONE_DAY
+
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
+        .to.emit(SftRolesRegistry, 'RoleGranted')
+        .withArgs(
+          roleAssignment.nonce,
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.tokenAmount,
+          roleAssignment.grantor,
+          roleAssignment.grantee,
+          roleAssignment.expirationDate,
+          roleAssignment.revocable,
+          roleAssignment.data,
+        )
+    })
+
     it("should revert if grantor's balance is insufficient", async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRoleFrom({
@@ -425,6 +468,30 @@ describe('SftRolesRegistry', async () => {
       await expect(SftRolesRegistry.connect(grantor).revokeRoleFrom(newRevokeRoleData)).to.be.revertedWith(
         'SftRolesRegistry: role is not revocable or caller is not the approved',
       )
+    })
+    it('should NOT revert if nonce is not expired and is not revocable, but the caller is the grantee', async () => {
+      const newRoleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        grantee: grantee.address,
+        revocable: false,
+      })
+
+      const newRevokeRoleData = buildRevokeRoleData(newRoleAssignment)
+      await MockToken.mint(newRoleAssignment.grantor, newRoleAssignment.tokenId, newRoleAssignment.tokenAmount)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment))
+
+      await expect(SftRolesRegistry.connect(grantee).revokeRoleFrom(newRevokeRoleData))
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(
+          newRevokeRoleData.nonce,
+          newRevokeRoleData.role,
+          newRevokeRoleData.tokenAddress,
+          newRevokeRoleData.tokenId,
+          newRoleAssignment.tokenAmount,
+          newRevokeRoleData.revoker,
+          newRevokeRoleData.grantee,
+        )
     })
 
     it('should revert if caller is not approved', async () => {
@@ -603,18 +670,27 @@ describe('SftRolesRegistry', async () => {
         ),
       ).to.be.equal(RoleAssignment.tokenAmount)
     })
+    it("should return the grantee's balance zero of tokens if grants are expired", async () => {
+      await time.increase(ONE_DAY + 1)
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          RoleAssignment.role,
+          RoleAssignment.tokenAddress,
+          RoleAssignment.tokenId,
+          RoleAssignment.grantee,
+        ),
+      ).to.be.equal(0)
+    })
   })
 
   describe('ERC-165 supportsInterface', async () => {
-    it('should return true if ERC1155Receiver interface id', async () => {
+    it('should return true if ERC1155Receiver interface id (0x4e2312e0)', async () => {
       expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
     })
 
-    // todo validate SftRolesRegistry is supported
-    // it('should return true if SftRolesRegistry interface id', async () => {
-    //   const id = getInterfaceID(IERCXXXX__factory.createInterface())
-    //   console.log('id', id)
-    //   expect(await SftRolesRegistry.supportsInterface(id)).to.be.true
-    // })
+    it('should return true if SftRolesRegistry interface id (0x00044ff6)', async () => {
+      //const id = getInterfaceID(IERCXXXX__factory.createInterface())
+      expect(await SftRolesRegistry.supportsInterface('0x00044ff6')).to.be.true
+    })
   })
 })
