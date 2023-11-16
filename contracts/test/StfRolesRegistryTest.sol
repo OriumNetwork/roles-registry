@@ -32,12 +32,37 @@ contract SftRolesRegistryTest is SetupTest {
             revocable: revocable,
             data: data
         });
-        
+
         _roleAssignment.tokenAddress = address(mockERC1155);
         vm.startPrank(msg.sender);
         mockERC1155.mint(msg.sender, _roleAssignment.tokenId, _roleAssignment.tokenAmount);
         mockERC1155.setApprovalForAll(address(sftRolesRegistry), true);
         sftRolesRegistry.grantRoleFrom(_roleAssignment);
+        vm.stopPrank();
+    }
+
+    function test_revokeRoleFrom(
+        uint256 nonce,
+        bytes32 role,
+        uint256 tokenId,
+        uint256 tokenAmount,
+        address grantee,
+        uint64 expirationDate,
+        bool revocable
+    ) public {
+        test_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
+
+        IERCXXXX.RevokeRoleData memory _revokeRoleData = IERCXXXX.RevokeRoleData({
+            nonce: nonce,
+            role: role,
+            tokenAddress: address(mockERC1155),
+            tokenId: tokenId,
+            revoker: msg.sender,
+            grantee: grantee
+        });
+
+        vm.startPrank(grantee);
+        sftRolesRegistry.revokeRoleFrom(_revokeRoleData);
         vm.stopPrank();
     }
 }
