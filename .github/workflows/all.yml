@@ -17,12 +17,16 @@ jobs:
           node-version: 18
           registry-url: https://npm.pkg.github.com
           scope: '@oriumnetwork'
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@v1
       - name: Install Dependencies
         run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GHB_TOKEN }}
       - name: Lint
         run: npm run lint
+      - name: Run Foundry tests
+        run: forge test --verbosity -vvv
       - name: Compile Smart Contracts
         run: npm run compile
         env:
