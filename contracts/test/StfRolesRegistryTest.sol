@@ -6,13 +6,38 @@ import { SetupTest } from "./SetupTest.sol";
 import { IERCXXXX } from "../RolesRegistry/interfaces/IERCXXXX.sol";
 
 contract SftRolesRegistryTest is SetupTest {
+    function test_grantRoleFrom(
+        uint256 nonce,
+        bytes32 role,
+        uint256 tokenId,
+        uint256 tokenAmount,
+        address grantee,
+        uint64 expirationDate,
+        bool revocable,
+        bytes memory data
+    ) public {
+        vm.assume(tokenAmount > 0);
+        vm.assume(nonce > 0);
+        vm.assume(expirationDate > block.timestamp + 1 days);
 
-    function test_grantRoleFrom(IERCXXXX.RoleAssignment memory _roleAssignment) public {
-        // TODO
+        IERCXXXX.RoleAssignment memory _roleAssignment = IERCXXXX.RoleAssignment({
+            nonce: nonce,
+            role: role,
+            tokenAddress: address(mockERC1155),
+            tokenId: tokenId,
+            tokenAmount: tokenAmount,
+            grantor: msg.sender,
+            grantee: grantee,
+            expirationDate: expirationDate,
+            revocable: revocable,
+            data: data
+        });
+        
         _roleAssignment.tokenAddress = address(mockERC1155);
-        mockERC1155.mint(_roleAssignment.grantor, _roleAssignment.tokenId, _roleAssignment.tokenAmount);
+        vm.startPrank(msg.sender);
+        mockERC1155.mint(msg.sender, _roleAssignment.tokenId, _roleAssignment.tokenAmount);
         mockERC1155.setApprovalForAll(address(sftRolesRegistry), true);
         sftRolesRegistry.grantRoleFrom(_roleAssignment);
+        vm.stopPrank();
     }
-
 }
