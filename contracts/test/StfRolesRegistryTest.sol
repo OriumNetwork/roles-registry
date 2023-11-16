@@ -6,7 +6,7 @@ import { SetupTest } from "./SetupTest.sol";
 import { IERCXXXX } from "../RolesRegistry/interfaces/IERCXXXX.sol";
 
 contract SftRolesRegistryTest is SetupTest {
-    function test_grantRoleFrom(
+    function testFuzz_grantRoleFrom(
         uint256 nonce,
         bytes32 role,
         uint256 tokenId,
@@ -39,9 +39,12 @@ contract SftRolesRegistryTest is SetupTest {
         mockERC1155.setApprovalForAll(address(sftRolesRegistry), true);
         sftRolesRegistry.grantRoleFrom(_roleAssignment);
         vm.stopPrank();
+
+        uint256 _roleBalance = sftRolesRegistry.roleBalanceOf(role, address(mockERC1155), tokenId, grantee);
+        assertEq(_roleBalance, tokenAmount);
     }
 
-    function test_revokeRoleFrom(
+    function testFuzz_revokeRoleFrom(
         uint256 nonce,
         bytes32 role,
         uint256 tokenId,
@@ -50,7 +53,7 @@ contract SftRolesRegistryTest is SetupTest {
         uint64 expirationDate,
         bool revocable
     ) public {
-        test_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
+        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
 
         IERCXXXX.RevokeRoleData memory _revokeRoleData = IERCXXXX.RevokeRoleData({
             nonce: nonce,
@@ -64,5 +67,8 @@ contract SftRolesRegistryTest is SetupTest {
         vm.startPrank(grantee);
         sftRolesRegistry.revokeRoleFrom(_revokeRoleData);
         vm.stopPrank();
+
+        uint256 _roleBalance = sftRolesRegistry.roleBalanceOf(role, address(mockERC1155), tokenId, grantee);
+        assertEq(_roleBalance, 0);
     }
 }
