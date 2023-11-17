@@ -41,7 +41,7 @@ describe('SftRolesRegistry', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
     })
 
-    it.skip('should grant role for two different grantees with the same tokenId', async function () {
+    it('should grant role for two different grantees with the same tokenId', async function () {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
@@ -103,7 +103,15 @@ describe('SftRolesRegistry', async () => {
 
       // 4. grant role to grantee2 with sharedNonce
       roleAssignment.nonce = sharedNonce
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address, //operator
+          SftRolesRegistry.address, //from
+          roleAssignment.grantor, //to
+          roleAssignment.tokenId,
+          originalTokenAmount - 1,
+        )
 
       // now grantee2 should have 2 tokens as balance
       expect(
@@ -115,7 +123,6 @@ describe('SftRolesRegistry', async () => {
         ),
       ).to.be.equal(2)
 
-      // grantee1 should still have double of the tokens
       expect(
         await SftRolesRegistry.roleBalanceOf(
           roleAssignment.role,
@@ -123,7 +130,22 @@ describe('SftRolesRegistry', async () => {
           roleAssignment.tokenId,
           grantee1,
         ),
-      ).to.be.equal(originalTokenAmount * 2)
+      ).to.be.equal(originalTokenAmount)
+
+      // grante1 => 444 => 7
+      // grante1 => 10 => 7
+
+      // grante1 balance: 14
+      // grante2 balance: 0
+
+      // grante2 => 1 => 1
+      // grante2 => 10 => 1
+
+      // grante1 balance: 7
+      //transferBack 6 tokens to grante1
+      // grante2 balance: 2
+
+      // grantee1 should still have double of the tokens
     })
 
     it('should revert if expirationDate is in the past', async () => {
@@ -416,9 +438,9 @@ describe('SftRolesRegistry', async () => {
         // transfer leftover tokens to grantor
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
-          SftRolesRegistry.address,
-          SftRolesRegistry.address,
-          RoleAssignment.grantor,
+          SftRolesRegistry.address, //operator
+          SftRolesRegistry.address, //from
+          RoleAssignment.grantor, //to
           RoleAssignment.tokenId,
           RoleAssignment.tokenAmount - newTokenAmount,
         )
@@ -575,7 +597,7 @@ describe('SftRolesRegistry', async () => {
           newRevokeRoleData.tokenId,
           newRoleAssignment.tokenAmount,
           newRevokeRoleData.revoker,
-          newRevokeRoleData.grantee,
+          newRoleAssignment.grantee,
         )
     })
 
@@ -673,7 +695,7 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
           RevokeRoleData.revoker,
-          RevokeRoleData.grantee,
+          RoleAssignment.grantee,
         )
         // transfer tokens back to owner
         .to.emit(MockToken, 'TransferSingle')
@@ -714,14 +736,13 @@ describe('SftRolesRegistry', async () => {
     it('should return the role data', async () => {
       const roleData = await SftRolesRegistry.roleData(RoleAssignment.nonce)
       const hash = ethers.utils.defaultAbiCoder.encode(
-        ['uint256', 'bytes32', 'address', 'uint256', 'address', 'address'],
+        ['uint256', 'bytes32', 'address', 'uint256', 'address'],
         [
           RoleAssignment.nonce,
           RoleAssignment.role,
           RoleAssignment.tokenAddress,
           RoleAssignment.tokenId,
           RoleAssignment.grantor,
-          RoleAssignment.grantee,
         ],
       )
       expect(roleData.hash).to.be.equal(ethers.utils.keccak256(hash))
@@ -774,9 +795,9 @@ describe('SftRolesRegistry', async () => {
       expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
     })
 
-    it('should return true if SftRolesRegistry interface id (0x00044ff6)', async () => {
+    it('should return true if SftRolesRegistry interface id (0x89cb6ab6)', async () => {
       //const id = getInterfaceID(IERCXXXX__factory.createInterface())
-      expect(await SftRolesRegistry.supportsInterface('0x00044ff6')).to.be.true
+      expect(await SftRolesRegistry.supportsInterface('0x89cb6ab6')).to.be.true
     })
   })
 })

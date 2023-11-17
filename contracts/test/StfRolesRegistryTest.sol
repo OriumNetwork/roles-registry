@@ -60,8 +60,7 @@ contract SftRolesRegistryTest is SetupTest {
             role: role,
             tokenAddress: address(mockERC1155),
             tokenId: tokenId,
-            revoker: msg.sender,
-            grantee: grantee
+            revoker: msg.sender
         });
 
         vm.startPrank(grantee);
@@ -70,5 +69,52 @@ contract SftRolesRegistryTest is SetupTest {
 
         uint256 _roleBalance = sftRolesRegistry.roleBalanceOf(role, address(mockERC1155), tokenId, grantee);
         assertEq(_roleBalance, 0);
+    }
+
+    function testFuzz_expirationDate(
+        uint256 nonce,
+        bytes32 role,
+        uint256 tokenId,
+        uint256 tokenAmount,
+        address grantee,
+        uint64 expirationDate,
+        bool revocable
+    ) public {
+        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
+        uint256 _duration = expirationDate - block.timestamp;
+        skip(_duration + 1);
+        uint256 _roleBalance = sftRolesRegistry.roleBalanceOf(role, address(mockERC1155), tokenId, grantee);
+        assertEq(_roleBalance, 0);
+    }
+
+    struct NonceTest {
+        uint256 nonce;
+        uint256 tokenId;
+        uint256 tokenAmount;
+        address grantee;
+        uint64 expirationDate;
+    }
+
+    mapping(uint256 => bool) alreadyTestedNonce;
+
+    function testFuzz_batchGrantRoleFrom(NonceTest[] memory _nonceTest) public {
+        bytes32 _role = keccak256("testFuzz_nonce");
+
+        for (uint256 i = 0; i < _nonceTest.length; i++) {
+            if (alreadyTestedNonce[_nonceTest[i].nonce]) continue;
+            alreadyTestedNonce[_nonceTest[i].nonce] = true;
+            vm.assume(_nonceTest[i].tokenAmount < 1000);
+
+            testFuzz_grantRoleFrom(
+                _nonceTest[i].nonce,
+                _role,
+                _nonceTest[i].tokenId,
+                _nonceTest[i].tokenAmount,
+                _nonceTest[i].grantee,
+                _nonceTest[i].expirationDate,
+                true,
+                ""
+            );
+        }
     }
 }

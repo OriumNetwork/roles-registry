@@ -10,8 +10,9 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 interface IERCXXXX is IERC165 {
     struct RoleData {
         bytes32 hash;
-        uint256 tokenAmount;
-        uint64 expirationDate;
+        address grantee;
+        uint256 tokenAmount;  
+        uint64 expirationDate; 
         bool revocable;
         bytes data;
     }
@@ -35,7 +36,6 @@ interface IERCXXXX is IERC165 {
         address tokenAddress;
         uint256 tokenId;
         address revoker;
-        address grantee;
     }
 
     /** Events **/
