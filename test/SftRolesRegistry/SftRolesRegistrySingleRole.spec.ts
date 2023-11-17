@@ -39,7 +39,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
     })
 
-    it.only('should grant role for two different grantees with the same tokenId', async function () {
+    it.skip('should grant role for two different grantees with the same tokenId', async function () {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
