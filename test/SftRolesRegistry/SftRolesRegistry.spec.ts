@@ -115,6 +115,7 @@ describe('SftRolesRegistry', async () => {
         ),
       ).to.be.equal(2)
 
+      // grantee1 should still have double of the tokens
       expect(
         await SftRolesRegistry.roleBalanceOf(
           roleAssignment.role,
