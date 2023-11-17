@@ -39,6 +39,90 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
     })
 
+    it.only('should grant role for two different grantees with the same tokenId', async function () {
+      const roleAssignment = await buildRoleAssignment({
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        grantee: grantee.address,
+      })
+      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount * 2 + 3)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+
+      // hipotesis: this nonce cna be shared between two grantees (shouldn't happen)
+      const sharedNonce = roleAssignment.nonce
+      const grantee1 = grantee.address
+      const grantee2 = '0x0000000000000000000000000000000000000001'
+      const originalTokenAmount = 7
+      roleAssignment.tokenAmount = originalTokenAmount
+
+      // 1. grant role to grantee1 with nonce 444
+      roleAssignment.nonce = 444
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+
+      // check if grantee1 balance is correct
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.grantee,
+        ),
+      ).to.be.equal(roleAssignment.tokenAmount)
+
+      // 2. grant role to grantee1 with sharedNonce
+      roleAssignment.nonce = sharedNonce
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+
+      // now grantee1 should have double of the tokens
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.grantee,
+        ),
+      ).to.be.equal(roleAssignment.tokenAmount * 2)
+
+      // 3. grant role to grantee2 with nonce 1
+      roleAssignment.nonce = 1
+      roleAssignment.grantee = grantee2
+      roleAssignment.tokenAmount = 1
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+
+      // grantee2 should have 1 token as balance
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.grantee,
+        ),
+      ).to.be.equal(1)
+
+      // 4. grant role to grantee2 with sharedNonce
+      roleAssignment.nonce = sharedNonce
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+
+      // now grantee2 should have 2 tokens as balance
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          roleAssignment.grantee,
+        ),
+      ).to.be.equal(2)
+
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          roleAssignment.role,
+          roleAssignment.tokenAddress,
+          roleAssignment.tokenId,
+          grantee1,
+        ),
+      ).to.be.equal(originalTokenAmount * 2)
+    })
+
     it('should revert if expirationDate is in the past', async () => {
       const roleAssignment = await buildRoleAssignment({
         expirationDate: (await time.latest()) - ONE_DAY,
