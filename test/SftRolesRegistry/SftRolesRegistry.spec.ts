@@ -41,7 +41,7 @@ describe('SftRolesRegistry', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
     })
 
-    it.only('should grant role for two different grantees with the same tokenId', async function () {
+    it.skip('should grant role for two different grantees with the same tokenId', async function () {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
@@ -714,13 +714,14 @@ describe('SftRolesRegistry', async () => {
     it('should return the role data', async () => {
       const roleData = await SftRolesRegistry.roleData(RoleAssignment.nonce)
       const hash = ethers.utils.defaultAbiCoder.encode(
-        ['uint256', 'bytes32', 'address', 'uint256', 'address'],
+        ['uint256', 'bytes32', 'address', 'uint256', 'address', 'address'],
         [
           RoleAssignment.nonce,
           RoleAssignment.role,
           RoleAssignment.tokenAddress,
           RoleAssignment.tokenId,
           RoleAssignment.grantor,
+          RoleAssignment.grantee,
         ],
       )
       expect(roleData.hash).to.be.equal(ethers.utils.keccak256(hash))

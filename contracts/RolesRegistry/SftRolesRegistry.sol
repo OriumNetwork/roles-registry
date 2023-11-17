@@ -53,7 +53,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.role,
             _roleAssignment.tokenAddress,
             _roleAssignment.tokenId,
-            _roleAssignment.grantor
+            _roleAssignment.grantor,
+            _roleAssignment.grantee
         );
 
         bytes32 rootKey = _getHeadKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
@@ -247,14 +248,15 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _revokeRoleData.role,
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
-            _revokeRoleData.revoker
+            _revokeRoleData.revoker,
+            _revokeRoleData.grantee
         );
     }
 
     function _hashRoleData(
-        uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor
+        uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor, address _grantee
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(_nonce, _role, _tokenAddress, _tokenId, _grantor));
+        return keccak256(abi.encode(_nonce, _role, _tokenAddress, _tokenId, _grantor, _grantee));
     }
 
     function _findCaller(RevokeRoleData calldata _revokeRoleData) internal view returns (address) {
