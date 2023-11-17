@@ -39,7 +39,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
     })
 
-    it.skip('should grant role for two different grantees with the same tokenId', async function () {
+    it('should grant role for two different grantees with the same tokenId', async function () {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
@@ -101,7 +101,15 @@ describe('SftRolesRegistrySingleRole', async () => {
 
       // 4. grant role to grantee2 with sharedNonce
       roleAssignment.nonce = sharedNonce
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.not.be.reverted
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address, //operator
+          SftRolesRegistry.address, //from
+          roleAssignment.grantor, //to
+          roleAssignment.tokenId,
+          originalTokenAmount - 1,
+        )
 
       // now grantee2 should have 2 tokens as balance
       expect(
@@ -113,7 +121,6 @@ describe('SftRolesRegistrySingleRole', async () => {
         ),
       ).to.be.equal(2)
 
-      // grantee1 should still have double of the tokens
       expect(
         await SftRolesRegistry.roleBalanceOf(
           roleAssignment.role,
@@ -121,7 +128,22 @@ describe('SftRolesRegistrySingleRole', async () => {
           roleAssignment.tokenId,
           grantee1,
         ),
-      ).to.be.equal(originalTokenAmount * 2)
+      ).to.be.equal(originalTokenAmount)
+
+      // grante1 => 444 => 7
+      // grante1 => 10 => 7
+
+      // grante1 balance: 14
+      // grante2 balance: 0
+
+      // grante2 => 1 => 1
+      // grante2 => 10 => 1
+
+      // grante1 balance: 7
+      //transferBack 6 tokens to grante1
+      // grante2 balance: 2
+
+      // grantee1 should still have double of the tokens
     })
 
     it('should revert if expirationDate is in the past', async () => {
@@ -524,7 +546,7 @@ describe('SftRolesRegistrySingleRole', async () => {
           newRevokeRoleData.tokenId,
           newRoleAssignment.tokenAmount,
           newRevokeRoleData.revoker,
-          newRevokeRoleData.grantee,
+          newRoleAssignment.grantee,
         )
     })
 
