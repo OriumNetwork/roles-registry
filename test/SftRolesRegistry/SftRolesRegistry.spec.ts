@@ -50,7 +50,6 @@ describe('SftRolesRegistry', async () => {
       await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount * 2 + 3)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
 
-      // hipotesis: this nonce cna be shared between two grantees (shouldn't happen)
       const sharedNonce = roleAssignment.nonce
       const grantee1 = grantee.address
       const grantee2 = '0x0000000000000000000000000000000000000001'
@@ -131,21 +130,6 @@ describe('SftRolesRegistry', async () => {
           grantee1,
         ),
       ).to.be.equal(originalTokenAmount)
-
-      // grante1 => 444 => 7
-      // grante1 => 10 => 7
-
-      // grante1 balance: 14
-      // grante2 balance: 0
-
-      // grante2 => 1 => 1
-      // grante2 => 10 => 1
-
-      // grante1 balance: 7
-      //transferBack 6 tokens to grante1
-      // grante2 balance: 2
-
-      // grantee1 should still have double of the tokens
     })
 
     it('should revert if expirationDate is in the past', async () => {
