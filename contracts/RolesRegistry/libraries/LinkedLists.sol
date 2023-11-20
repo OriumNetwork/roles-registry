@@ -2,14 +2,13 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from "../interfaces/IERCXXXX.sol";
+import { IERCXXXX } from '../interfaces/IERCXXXX.sol';
 
 /// LinkedLists allow developers to manage multiple linked lists at once.
 /// all lists are identified by a head key (bytes32)
 /// each list item is identified by a nonce
 /// the list is sorted by the expiration date in decreasing order
 library LinkedLists {
-
     uint256 public constant EMPTY = 0;
 
     struct Lists {
@@ -24,7 +23,7 @@ library LinkedLists {
     }
 
     function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
-        require(_nonce != EMPTY, "LinkedLists: invalid nonce");
+        require(_nonce != EMPTY, 'LinkedLists: invalid nonce');
 
         uint256 headNonce = _self.heads[_headKey];
         if (headNonce == EMPTY) {
@@ -49,17 +48,25 @@ library LinkedLists {
 
         // search where to insert
         uint256 currentNonce = headNonce;
-        while (_self.items[currentNonce].next != EMPTY && _data.expirationDate < _self.items[_self.items[currentNonce].next].data.expirationDate) {
+        while (
+            _self.items[currentNonce].next != EMPTY &&
+            _data.expirationDate < _self.items[_self.items[currentNonce].next].data.expirationDate
+        ) {
             currentNonce = _self.items[currentNonce].next;
         }
         _insertAt(_self, currentNonce, _nonce, _data);
     }
 
-    function _insertAt(Lists storage _self, uint256 _previousNonce, uint256 _dataNonce, IERCXXXX.RoleData memory _data) internal {
+    function _insertAt(
+        Lists storage _self,
+        uint256 _previousNonce,
+        uint256 _dataNonce,
+        IERCXXXX.RoleData memory _data
+    ) internal {
         ListItem storage previousItem = _self.items[_previousNonce];
         if (previousItem.next == EMPTY) {
             // insert as last item
-            _self.items[_dataNonce] =  ListItem(_data, _previousNonce, EMPTY);
+            _self.items[_dataNonce] = ListItem(_data, _previousNonce, EMPTY);
         } else {
             // insert in the middle
             _self.items[_dataNonce] = ListItem(_data, _previousNonce, previousItem.next);
@@ -72,13 +79,16 @@ library LinkedLists {
 
     function remove(Lists storage _self, bytes32 _headKey, uint256 _nonce) internal {
         uint256 headNonce = _self.heads[_headKey];
-        require(headNonce != EMPTY && _self.items[_nonce].data.expirationDate != 0, "LinkedLists: empty list or invalid nonce");
+        require(
+            headNonce != EMPTY && _self.items[_nonce].data.expirationDate != 0,
+            'LinkedLists: empty list or invalid nonce'
+        );
 
         // only the head has previous as empty
         if (_self.items[_nonce].previous == EMPTY) {
             // if item is the head
             // check if correct headKey was provided
-            require(headNonce == _nonce, "LinkedLists: invalid headKey provided");
+            require(headNonce == _nonce, 'LinkedLists: invalid headKey provided');
             // remove head
             if (_self.items[_nonce].next == EMPTY) {
                 // list contains only one item
@@ -101,11 +111,9 @@ library LinkedLists {
                 // update next item
                 _self.items[itemToRemove.next].previous = itemToRemove.previous;
             }
-
         }
 
         // delete item from storage
         delete _self.items[_nonce];
     }
-
 }

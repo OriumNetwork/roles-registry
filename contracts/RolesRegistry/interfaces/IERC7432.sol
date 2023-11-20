@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
 /// @title ERC-7432 Non-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-7432
@@ -64,11 +64,7 @@ interface IERC7432 is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
     /// @param _isApproved The approval status.
-    event RoleApprovalForAll(
-        address indexed _tokenAddress,
-        address indexed _operator,
-        bool _isApproved
-    );
+    event RoleApprovalForAll(address indexed _tokenAddress, address indexed _operator, bool _isApproved);
 
     /** External Functions **/
 
@@ -98,11 +94,7 @@ interface IERC7432 is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
     /// @param _approved The approval status.
-    function setRoleApprovalForAll(
-        address _tokenAddress,
-        address _operator,
-        bool _approved
-    ) external;
+    function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external;
 
     /** View Functions **/
 

@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.9;
 
-import { IERC7432 } from "./interfaces/IERC7432.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import { IERC7432 } from './interfaces/IERC7432.sol';
+import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 contract RolesRegistry is IERC7432 {
     // grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
@@ -16,7 +16,7 @@ contract RolesRegistry is IERC7432 {
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
     modifier validExpirationDate(uint64 _expirationDate) {
-        require(_expirationDate > block.timestamp, "RolesRegistry: expiration date must be in the future");
+        require(_expirationDate > block.timestamp, 'RolesRegistry: expiration date must be in the future');
         _;
     }
 
@@ -29,7 +29,7 @@ contract RolesRegistry is IERC7432 {
         require(
             msg.sender == _tokenOwner ||
                 (isRoleApprovedForAll(_tokenAddress, _account, msg.sender) && _account == _tokenOwner),
-            "RolesRegistry: sender must be token owner or approved"
+            'RolesRegistry: sender must be token owner or approved'
         );
         _;
     }
@@ -39,7 +39,7 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _account
     ) {
-        require(_account == IERC721(_tokenAddress).ownerOf(_tokenId), "RolesRegistry: account must be token owner");
+        require(_account == IERC721(_tokenAddress).ownerOf(_tokenId), 'RolesRegistry: account must be token owner');
         _;
     }
 
@@ -78,7 +78,7 @@ contract RolesRegistry is IERC7432 {
 
         if (_hasActiveAssignment) {
             // only unique roles can be revocable
-            require(_roleData.revocable, "RolesRegistry: role is not revocable");
+            require(_roleData.revocable, 'RolesRegistry: role is not revocable');
         }
 
         roleAssignments[_roleAssignment.grantee][_roleAssignment.tokenAddress][_roleAssignment.tokenId][
@@ -121,7 +121,7 @@ contract RolesRegistry is IERC7432 {
         } else if (isRoleApprovedForAll(_tokenAddress, _revoker, msg.sender)) {
             return _revoker;
         } else {
-            revert("RolesRegistry: sender must be approved");
+            revert('RolesRegistry: sender must be approved');
         }
     }
 
@@ -135,7 +135,7 @@ contract RolesRegistry is IERC7432 {
     ) internal {
         require(
             _caller == _grantee || roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable,
-            "RolesRegistry: Role is not revocable or caller is not the grantee"
+            'RolesRegistry: Role is not revocable or caller is not the grantee'
         );
         delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
         delete latestGrantees[_tokenAddress][_tokenId][_role];
