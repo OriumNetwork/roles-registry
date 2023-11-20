@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.9;
 
-import { SetupTest } from "./SetupTest.sol";
-import { IERCXXXX } from "../RolesRegistry/interfaces/IERCXXXX.sol";
+import { SetupTest } from './SetupTest.sol';
+import { IERCXXXX } from '../RolesRegistry/interfaces/IERCXXXX.sol';
 
 contract SftRolesRegistryTest is SetupTest {
     function testFuzz_grantRoleFrom(
@@ -53,7 +53,7 @@ contract SftRolesRegistryTest is SetupTest {
         uint64 expirationDate,
         bool revocable
     ) public {
-        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
+        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, '');
 
         IERCXXXX.RevokeRoleData memory _revokeRoleData = IERCXXXX.RevokeRoleData({
             nonce: nonce,
@@ -80,7 +80,7 @@ contract SftRolesRegistryTest is SetupTest {
         uint64 expirationDate,
         bool revocable
     ) public {
-        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, "");
+        testFuzz_grantRoleFrom(nonce, role, tokenId, tokenAmount, grantee, expirationDate, revocable, '');
         uint256 _duration = expirationDate - block.timestamp;
         skip(_duration + 1);
         uint256 _roleBalance = sftRolesRegistry.roleBalanceOf(role, address(mockERC1155), tokenId, grantee);
@@ -98,7 +98,7 @@ contract SftRolesRegistryTest is SetupTest {
     mapping(uint256 => bool) alreadyTestedNonce;
 
     function testFuzz_batchGrantRoleFrom(NonceTest[] memory _nonceTest) public {
-        bytes32 _role = keccak256("testFuzz_nonce");
+        bytes32 _role = keccak256('testFuzz_nonce');
 
         for (uint256 i = 0; i < _nonceTest.length; i++) {
             if (alreadyTestedNonce[_nonceTest[i].nonce]) continue;
@@ -113,7 +113,7 @@ contract SftRolesRegistryTest is SetupTest {
                 _nonceTest[i].grantee,
                 _nonceTest[i].expirationDate,
                 true,
-                ""
+                ''
             );
         }
     }

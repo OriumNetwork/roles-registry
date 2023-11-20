@@ -2,13 +2,13 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from "./interfaces/IERCXXXX.sol";
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { LinkedLists } from "./libraries/LinkedLists.sol";
+import { IERCXXXX } from './interfaces/IERCXXXX.sol';
+import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
+import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
+import { IERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
+import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
+import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
+import { LinkedLists } from './libraries/LinkedLists.sol';
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
@@ -21,7 +21,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
     modifier validExpirationDate(uint64 _expirationDate) {
-        require(_expirationDate > block.timestamp, "SftRolesRegistry: expiration date must be in the future");
+        require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
         _;
     }
 
@@ -31,10 +31,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         uint256 _tokenId,
         uint256 _tokenAmount
     ) {
-        require(_tokenAmount > 0, "SftRolesRegistry: tokenAmount must be greater than zero");
+        require(_tokenAmount > 0, 'SftRolesRegistry: tokenAmount must be greater than zero');
         require(
             _account == msg.sender || isRoleApprovedForAll(_tokenAddress, _account, msg.sender),
-            "SftRolesRegistry: account not approved"
+            'SftRolesRegistry: account not approved'
         );
         _;
     }
@@ -80,10 +80,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             );
         } else {
             // nonce is being used
-            require(item.data.hash == hash, "SftRolesRegistry: nonce exist, but data mismatch"); // validates nonce, role, tokenAddress, tokenId, grantor
+            require(item.data.hash == hash, 'SftRolesRegistry: nonce exist, but data mismatch'); // validates nonce, role, tokenAddress, tokenId, grantor
             require(
                 item.data.expirationDate < block.timestamp || item.data.revocable,
-                "SftRolesRegistry: nonce is not expired or is not revocable"
+                'SftRolesRegistry: nonce is not expired or is not revocable'
             );
 
             // deposit or withdraw tokens
@@ -160,15 +160,12 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external override {
         LinkedLists.ListItem storage item = lists.items[_revokeRoleData.nonce];
         address _grantee = item.data.grantee;
-        require(item.data.hash == _hashRoleData(_revokeRoleData), "SftRolesRegistry: could not find role assignment");
+        require(item.data.hash == _hashRoleData(_revokeRoleData), 'SftRolesRegistry: could not find role assignment');
 
         address caller = _findCaller(_revokeRoleData, _grantee);
         if (item.data.expirationDate > block.timestamp && !item.data.revocable) {
             // if role is not expired and is not revocable, only the grantee can revoke it
-            require(
-                caller == _grantee,
-                "SftRolesRegistry: role is not revocable or caller is not the approved"
-            );
+            require(caller == _grantee, 'SftRolesRegistry: role is not revocable or caller is not the approved');
         }
 
         uint256 tokensToReturn = item.data.tokenAmount;
@@ -263,7 +260,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         uint256 _tokenId,
         uint256 _tokenAmount
     ) internal {
-        IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, "");
+        IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, '');
     }
 
     function _hashRoleData(RevokeRoleData calldata _revokeRoleData) internal pure returns (bytes32) {
@@ -295,14 +292,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             return _revokeRoleData.revoker;
         }
 
-        if (
-            _grantee == msg.sender ||
-            isRoleApprovedForAll(_revokeRoleData.tokenAddress, _grantee, msg.sender)
-        ) {
+        if (_grantee == msg.sender || isRoleApprovedForAll(_revokeRoleData.tokenAddress, _grantee, msg.sender)) {
             return _grantee;
         }
 
-        revert("SftRolesRegistry: sender must be approved");
+        revert('SftRolesRegistry: sender must be approved');
     }
 
     function _getHeadKey(

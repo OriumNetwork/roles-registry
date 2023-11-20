@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
 /// @title ERC-XXXX Semi-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
@@ -11,8 +11,8 @@ interface IERCXXXX is IERC165 {
     struct RoleData {
         bytes32 hash;
         address grantee;
-        uint256 tokenAmount;  
-        uint64 expirationDate; 
+        uint256 tokenAmount;
+        uint64 expirationDate;
         bool revocable;
         bytes data;
     }
@@ -139,5 +139,21 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
-    function isRoleApprovedForAll(address _tokenAddress, address _grantor, address _operator) external view returns (bool);
+    function isRoleApprovedForAll(
+        address _tokenAddress,
+        address _grantor,
+        address _operator
+    ) external view returns (bool);
+
+    /// @notice Calculates the amount of ERC-1155 tokens delegated to the specified _grantee.
+    /// @param _role The role identifier.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @param _grantee The user that received the role.
+    function roleBalanceOf(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantee
+    ) external view returns (uint256 balance_);
 }

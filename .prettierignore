@@ -1,0 +1,25 @@
+# Ignore artifacts:
+build
+coverage
+out
+cache_forge
+artifacts
+typechain-types
+.idea
+.env
+node_modules
+cache
+coverage.json
+.DS_Store
+.vscode
+lib
+
+# Ignore all files:
+*.html
+*.css
+*.md
+*.json
+*.yml
+*.yaml
+*.lock
+*.log

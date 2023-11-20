@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.9;
 
-import { Test } from "forge-std/Test.sol";
-import { SftRolesRegistry } from "../RolesRegistry/SftRolesRegistry.sol";
-import { MockERC1155 } from "../mocks/MockERC1155.sol";
+import { Test } from 'forge-std/Test.sol';
+import { SftRolesRegistry } from '../RolesRegistry/SftRolesRegistry.sol';
+import { MockERC1155 } from '../mocks/MockERC1155.sol';
 
 contract SetupTest is Test {
     SftRolesRegistry public sftRolesRegistry;
@@ -18,6 +18,4 @@ contract SetupTest is Test {
         sftRolesRegistry = new SftRolesRegistry();
         mockERC1155 = new MockERC1155();
     }
-    
-
 }
