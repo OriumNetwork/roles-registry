@@ -774,6 +774,54 @@ describe('SftRolesRegistry', async () => {
     })
   })
 
+  describe('RoleBalanceOf', async () => {
+    it('should check at least 4300 grant roles without run out of gas', async function () {
+      const tokenId = generateRandomInt()
+      const role = generateRoleId('Role()')
+      const expirationDate = (await time.latest()) + ONE_DAY
+
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+
+      let totalAmount = 0
+      const times = new Array(4300).fill(0)
+      const roleAssignments = times.map((t, i) => {
+        const newRoleAssignment = {
+          nonce: i + 1,
+          role,
+          tokenAddress: MockToken.address,
+          tokenId,
+          tokenAmount: generateRandomInt(),
+          grantor: grantor.address,
+          grantee: grantee.address,
+          expirationDate,
+          revocable: false,
+          data: '0x',
+        }
+        totalAmount += newRoleAssignment.tokenAmount
+
+        return newRoleAssignment
+      })
+
+      await MockToken.mint(grantor.address, tokenId, totalAmount * 2)
+
+      const promises = roleAssignments.map((t, i) => SftRolesRegistry.connect(grantor).grantRoleFrom(t))
+      await Promise.all(promises)
+
+      expect(await SftRolesRegistry.roleBalanceOf(role, MockToken.address, tokenId, grantee.address)).to.be.equal(
+        totalAmount,
+      )
+
+      const revokePromises = roleAssignments.map(async (t, i) => {
+        const revokeRoleData = buildRevokeRoleData(t)
+        return SftRolesRegistry.connect(grantee).revokeRoleFrom(revokeRoleData)
+      })
+
+      await Promise.all(revokePromises)
+
+      expect(await SftRolesRegistry.roleBalanceOf(role, MockToken.address, tokenId, grantee.address)).to.be.equal(0)
+    })
+  })
+
   describe('ERC-165 supportsInterface', async () => {
     it('should return true if ERC1155Receiver interface id (0x4e2312e0)', async () => {
       expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
