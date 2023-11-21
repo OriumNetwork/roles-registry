@@ -775,7 +775,7 @@ describe('SftRolesRegistry', async () => {
   })
 
   describe('RoleBalanceOf', async () => {
-    it('should check at least 4300 grant roles without run out of gas', async function () {
+    it('should check at least 2500 grant roles without run out of gas', async function () {
       const tokenId = generateRandomInt()
       const role = generateRoleId('Role()')
       const expirationDate = (await time.latest()) + ONE_DAY
@@ -783,7 +783,7 @@ describe('SftRolesRegistry', async () => {
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
 
       let totalAmount = 0
-      const times = new Array(4300).fill(0)
+      const times = new Array(2500).fill(0)
       const roleAssignments = times.map((t, i) => {
         const newRoleAssignment = {
           nonce: i + 1,

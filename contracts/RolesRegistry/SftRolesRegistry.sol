@@ -15,6 +15,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     using LinkedLists for LinkedLists.Lists;
     using LinkedLists for LinkedLists.ListItem;
 
+    uint16 public constant SIZE_LIMIT = 2500;
+
     LinkedLists.Lists internal lists;
 
     // grantor => tokenAddress => operator => isApproved
@@ -169,13 +171,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         }
 
         uint256 tokensToReturn = item.data.tokenAmount;
-        _transferFrom(
-            address(this),
-            _revokeRoleData.revoker,
-            _revokeRoleData.tokenAddress,
-            _revokeRoleData.tokenId,
-            tokensToReturn
-        );
 
         bytes32 rootKey = _getHeadKey(
             _grantee,
@@ -195,6 +190,14 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             tokensToReturn,
             _revokeRoleData.revoker,
             _grantee
+        );
+
+        _transferFrom(
+            address(this),
+            _revokeRoleData.revoker,
+            _revokeRoleData.tokenAddress,
+            _revokeRoleData.tokenId,
+            tokensToReturn
         );
     }
 
@@ -235,13 +238,15 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
         balance_ = 0;
         LinkedLists.ListItem storage currentItem;
-        while (currentNonce != 0) {
+        uint256 count = 0;
+        while (currentNonce != 0 && count < SIZE_LIMIT) {
             currentItem = lists.items[currentNonce];
             if (currentItem.data.expirationDate < block.timestamp) {
                 return balance_;
             }
             balance_ += currentItem.data.tokenAmount;
             currentNonce = currentItem.next;
+            count++;
         }
     }
 
