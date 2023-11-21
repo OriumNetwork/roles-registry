@@ -169,13 +169,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         }
 
         uint256 tokensToReturn = item.data.tokenAmount;
-        _transferFrom(
-            address(this),
-            _revokeRoleData.revoker,
-            _revokeRoleData.tokenAddress,
-            _revokeRoleData.tokenId,
-            tokensToReturn
-        );
 
         bytes32 rootKey = _getHeadKey(
             _grantee,
@@ -195,6 +188,14 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             tokensToReturn,
             _revokeRoleData.revoker,
             _grantee
+        );
+
+        _transferFrom(
+            address(this),
+            _revokeRoleData.revoker,
+            _revokeRoleData.tokenAddress,
+            _revokeRoleData.tokenId,
+            tokensToReturn
         );
     }
 
