@@ -10,10 +10,12 @@ import { IERCXXXX } from '../interfaces/IERCXXXX.sol';
 /// the list is sorted by the expiration date in decreasing order
 library LinkedLists {
     uint256 public constant EMPTY = 0;
+    uint16 public constant LIST_LIMIT = 2500;
 
     struct Lists {
         mapping(bytes32 => uint256) heads;
         mapping(uint256 => ListItem) items;
+        mapping(bytes32 => uint256) sizes;
     }
 
     struct ListItem {
@@ -24,6 +26,7 @@ library LinkedLists {
 
     function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
         require(_nonce != EMPTY, 'LinkedLists: invalid nonce');
+        require(_self.sizes[_headKey] < LIST_LIMIT, 'LinkedLists: list limit reached');
 
         uint256 headNonce = _self.heads[_headKey];
         if (headNonce == EMPTY) {
@@ -31,6 +34,7 @@ library LinkedLists {
             // insert as head
             _self.heads[_headKey] = _nonce;
             _self.items[_nonce] = ListItem(_data, EMPTY, EMPTY);
+            _self.sizes[_headKey]++;
             return;
         }
 
@@ -43,6 +47,7 @@ library LinkedLists {
             // insert as head
             _self.heads[_headKey] = _nonce;
             _self.items[_nonce] = ListItem(_data, EMPTY, headNonce);
+            _self.sizes[_headKey]++;
             return;
         }
 
@@ -55,6 +60,7 @@ library LinkedLists {
             currentNonce = _self.items[currentNonce].next;
         }
         _insertAt(_self, currentNonce, _nonce, _data);
+        _self.sizes[_headKey]++;
     }
 
     function _insertAt(
@@ -115,5 +121,6 @@ library LinkedLists {
 
         // delete item from storage
         delete _self.items[_nonce];
+        _self.sizes[_headKey]--;
     }
 }

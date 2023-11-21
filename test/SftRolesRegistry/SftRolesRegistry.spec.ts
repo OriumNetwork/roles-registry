@@ -2,7 +2,7 @@ import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
 import { beforeEach } from 'mocha'
 import { expect } from 'chai'
-import { solidityKeccak256 } from 'ethers/lib/utils'
+import { keccak256, solidityKeccak256, solidityPack } from 'ethers/lib/utils'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { buildRoleAssignment, ONE_DAY, generateRoleId, buildRevokeRoleData, getInterfaceID } from './helpers'
@@ -20,7 +20,7 @@ describe('SftRolesRegistry', async () => {
   let anotherUser: SignerWithAddress
 
   async function deployContracts() {
-    const SftRolesRegistryFactory = await ethers.getContractFactory('SftRolesRegistry')
+    const SftRolesRegistryFactory = await ethers.getContractFactory('MockSftRolesRegistry')
     SftRolesRegistry = await SftRolesRegistryFactory.deploy()
     const MockTokenFactory = await ethers.getContractFactory('MockERC1155')
     MockToken = await MockTokenFactory.deploy()
@@ -247,6 +247,55 @@ describe('SftRolesRegistry', async () => {
             roleAssignment.revocable,
             roleAssignment.data,
           )
+      })
+
+      it('should revert if tries more than 2500 grant roles for the same grantee', async function () {
+        const tokenId = generateRandomInt()
+        const role = generateRoleId('Role()')
+        const expirationDate = (await time.latest()) + ONE_DAY
+
+        await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+
+        let totalAmount = 0
+        const times = new Array(2500).fill(0)
+        const roleAssignments = times.map((t, i) => {
+          const newRoleAssignment = {
+            nonce: i + 1,
+            role,
+            tokenAddress: MockToken.address,
+            tokenId,
+            tokenAmount: generateRandomInt(),
+            grantor: grantor.address,
+            grantee: grantee.address,
+            expirationDate,
+            revocable: false,
+            data: '0x',
+          }
+          totalAmount += newRoleAssignment.tokenAmount
+
+          return newRoleAssignment
+        })
+
+        await MockToken.mint(grantor.address, tokenId, totalAmount * 2)
+
+        const promises = roleAssignments.map((t, i) => SftRolesRegistry.connect(grantor).grantRoleFrom(t))
+        await Promise.all(promises)
+
+        const newRoleAssignment = {
+          nonce: 2501,
+          role,
+          tokenAddress: MockToken.address,
+          tokenId,
+          tokenAmount: generateRandomInt(),
+          grantor: grantor.address,
+          grantee: grantee.address,
+          expirationDate,
+          revocable: false,
+          data: '0x',
+        }
+        await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment)).to.be.revertedWith(
+          'LinkedLists: list limit reached',
+        )
       })
     })
   })
@@ -779,6 +828,9 @@ describe('SftRolesRegistry', async () => {
       const tokenId = generateRandomInt()
       const role = generateRoleId('Role()')
       const expirationDate = (await time.latest()) + ONE_DAY
+      const headKey = keccak256(
+        solidityPack(['address', 'bytes32', 'address', 'uint256'], [grantee.address, role, MockToken.address, tokenId]),
+      )
 
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
 
@@ -810,6 +862,7 @@ describe('SftRolesRegistry', async () => {
       expect(await SftRolesRegistry.roleBalanceOf(role, MockToken.address, tokenId, grantee.address)).to.be.equal(
         totalAmount,
       )
+      expect(await SftRolesRegistry.getListSize(headKey)).to.be.equal(2500)
 
       const revokePromises = roleAssignments.map(async (t, i) => {
         const revokeRoleData = buildRevokeRoleData(t)
@@ -819,6 +872,7 @@ describe('SftRolesRegistry', async () => {
       await Promise.all(revokePromises)
 
       expect(await SftRolesRegistry.roleBalanceOf(role, MockToken.address, tokenId, grantee.address)).to.be.equal(0)
+      expect(await SftRolesRegistry.getListSize(headKey)).to.be.equal(0)
     })
   })
 

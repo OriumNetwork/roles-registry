@@ -15,8 +15,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     using LinkedLists for LinkedLists.Lists;
     using LinkedLists for LinkedLists.ListItem;
 
-    uint16 public constant SIZE_LIMIT = 2500;
-
     LinkedLists.Lists internal lists;
 
     // grantor => tokenAddress => operator => isApproved
@@ -239,7 +237,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         balance_ = 0;
         LinkedLists.ListItem storage currentItem;
         uint256 count = 0;
-        while (currentNonce != 0 && count < SIZE_LIMIT) {
+        while (currentNonce != 0) {
             currentItem = lists.items[currentNonce];
             if (currentItem.data.expirationDate < block.timestamp) {
                 return balance_;
