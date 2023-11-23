@@ -18,7 +18,7 @@ interface IERCXXXX is IERC165 {
     }
 
     struct RoleAssignment {
-        uint256 nonce;
+        uint256 depositId;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -30,8 +30,15 @@ interface IERCXXXX is IERC165 {
         bytes data;
     }
 
+    struct DepositData {
+        uint256 depositId;
+        address tokenAddress;
+        uint256 tokenId;
+        uint256 tokenAmount;
+    }
+
     struct RevokeRoleData {
-        uint256 nonce;
+        uint256 depositId;
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
@@ -88,6 +95,9 @@ interface IERCXXXX is IERC165 {
     /// @param _isApproved The approval status.
     event RoleApprovalForAll(address indexed _tokenAddress, address indexed _operator, bool _isApproved);
 
+    event TokenDeposited(uint256 indexed _depositId, address indexed _tokenAddress, uint256 _tokenId, uint256 _tokenAmount);
+
+    event TokenWithdrawn(uint256 indexed _depositId, address indexed _tokenAddress, uint256 _tokenId, uint256 _tokenAmount);
     /** External Functions **/
 
     /// @notice Grants a role on behalf of a user.
@@ -107,12 +117,14 @@ interface IERCXXXX is IERC165 {
     /** View Functions **/
 
     /// @notice Returns the custom data of a role assignment.
-    /// @param _nonce The identifier of the role assignment.
-    function roleData(uint256 _nonce) external view returns (RoleData memory data_);
+    /// @param _depositId The identifier of the role assignment.
+    /// @param _role The role identifier.
+    function roleData(uint256 _depositId, bytes32 _role) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
-    /// @param _nonce The identifier of the role assignment.
-    function roleExpirationDate(uint256 _nonce) external view returns (uint64 expirationDate_);
+    /// @param _depositId The identifier of the role assignment.
+    /// @param _role The role identifier.
+    function roleExpirationDate(uint256 _depositId, bytes32 _role) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.
@@ -133,6 +145,7 @@ interface IERCXXXX is IERC165 {
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
+        address _grantor,
         address _grantee
     ) external view returns (uint256 balance_);
 }

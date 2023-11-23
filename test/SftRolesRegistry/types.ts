@@ -1,5 +1,5 @@
 export interface RoleAssignment {
-  nonce: number
+  depositId: number
   role: string
   tokenAddress: string
   tokenId: number
@@ -12,7 +12,7 @@ export interface RoleAssignment {
 }
 
 export interface RevokeRoleData {
-  nonce: number
+  depositId: number
   role: string
   tokenAddress: string
   tokenId: number

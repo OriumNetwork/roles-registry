@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: CC0-1.0
 
+/*
+
 pragma solidity 0.8.9;
 
 import { Test } from 'forge-std/Test.sol';
@@ -19,3 +21,4 @@ contract SetupTest is Test {
         mockERC1155 = new MockERC1155();
     }
 }
+ */

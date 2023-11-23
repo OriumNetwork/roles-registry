@@ -10,7 +10,7 @@ export const ONE_DAY = 60 * 60 * 24
 
 export async function buildRoleAssignment({
   // default values
-  nonce = generateRandomInt(),
+  depositId = generateRandomInt(),
   role = 'Role()',
   tokenAddress = AddressZero,
   tokenId = generateRandomInt(),
@@ -22,7 +22,7 @@ export async function buildRoleAssignment({
   data = HashZero,
 }: {
   // types
-  nonce?: number
+  depositId?: number
   role?: string
   tokenAddress?: string
   tokenId?: number
@@ -34,7 +34,7 @@ export async function buildRoleAssignment({
   data?: string
 } = {}): Promise<RoleAssignment> {
   return {
-    nonce,
+    depositId,
     role: generateRoleId(role),
     tokenAddress,
     tokenId,
@@ -49,7 +49,7 @@ export async function buildRoleAssignment({
 
 export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleData {
   return {
-    nonce: roleAssignment.nonce,
+    depositId: roleAssignment.depositId,
     role: roleAssignment.role,
     tokenAddress: roleAssignment.tokenAddress,
     tokenId: roleAssignment.tokenId,
