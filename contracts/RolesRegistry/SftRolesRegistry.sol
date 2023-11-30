@@ -8,9 +8,11 @@ import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import { IERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
 import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
+import { EnumerableSet } from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     bytes32 public constant EQUIP_WEARABLE_ROLE = keccak256('EQUIP_WEARABLE_ROLE');
 
@@ -22,6 +24,9 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     // nonce => role => RoleAssignment
     mapping(uint256 => mapping(bytes32 => RoleData)) internal roleAssignments;
+
+    // nonce => rolesGranted
+    mapping(uint256 => EnumerableSet.Bytes32Set) internal rolesGranted;
 
     modifier validExpirationDate(uint64 _expirationDate) {
         require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
@@ -85,6 +90,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         );
 
         roleAssignments[_nonce][_roleData.role] = _roleData;
+        rolesGranted[_nonce].add(_roleData.role);
 
         emit RoleGranted(
             _nonce,
@@ -138,6 +144,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         }
 
         delete roleAssignments[_nonce][_roleData.role];
+        rolesGranted[_nonce].remove(_roleData.role);
 
         emit RoleRevoked(
             _nonce,
@@ -167,6 +174,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             roleAssignments[_nonce][EQUIP_WEARABLE_ROLE].grantee == address(0) ||
                 roleAssignments[_nonce][EQUIP_WEARABLE_ROLE].expirationDate < block.timestamp,
             'SftRolesRegistry: nft is delegated'
+        );
+        require(
+            rolesGranted[_nonce].length() == 0,
+            'SftRolesRegistry: all roles must be revoked before withdrawing'
         );
 
         delete deposits[_nonce];
