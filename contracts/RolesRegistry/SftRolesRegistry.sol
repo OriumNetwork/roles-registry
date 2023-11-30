@@ -8,11 +8,12 @@ import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import { IERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
 import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
-import { EnumerableSet } from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import { LinkedLists } from './libraries/LinkedLists.sol';
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
-    using EnumerableSet for EnumerableSet.Bytes32Set;
+    using LinkedLists for LinkedLists.Lists;
+    using LinkedLists for LinkedLists.ListItem;
 
     bytes32 public constant EQUIP_WEARABLE_ROLE = keccak256('EQUIP_WEARABLE_ROLE');
 
@@ -25,8 +26,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     // nonce => role => RoleAssignment
     mapping(uint256 => mapping(bytes32 => RoleData)) internal roleAssignments;
 
-    // nonce => rolesGranted
-    mapping(uint256 => EnumerableSet.Bytes32Set) internal rolesGranted;
+    LinkedLists.Lists internal lists;
 
     modifier validExpirationDate(uint64 _expirationDate) {
         require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
@@ -84,13 +84,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     function _grantOrUpdateRole(uint256 _nonce, DepositInfo memory _depositInfo, RoleData memory _roleData) internal {
         // validate if previous role assignment is expired or revocable
-        require(
-            _roleData.expirationDate < block.timestamp || _roleData.revocable,
-            'SftRolesRegistry: role is not revocable or not expired'
-        );
+        bytes32 _assingmentId = keccak256(abi.encodePacked(_nonce, _roleData.role));
+        require(lists.items[_assingmentId].data.expirationDate < block.timestamp || lists.items[_assingmentId].data.revocable, 'SftRolesRegistry: role still active');
 
         roleAssignments[_nonce][_roleData.role] = _roleData;
-        rolesGranted[_nonce].add(_roleData.role);
+        lists.insert(_nonce, _assingmentId, _roleData);
 
         emit RoleGranted(
             _nonce,
@@ -144,7 +142,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         }
 
         delete roleAssignments[_nonce][_roleData.role];
-        rolesGranted[_nonce].remove(_roleData.role);
+        lists.remove(_nonce, _roleData.role);
 
         emit RoleRevoked(
             _nonce,
@@ -171,12 +169,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         DepositInfo memory _depositInfo = deposits[_nonce];
         require(_depositInfo.tokenAmount > 0, 'SftRolesRegistry: deposit does not exist');
         require(
-            roleAssignments[_nonce][EQUIP_WEARABLE_ROLE].grantee == address(0) ||
-                roleAssignments[_nonce][EQUIP_WEARABLE_ROLE].expirationDate < block.timestamp,
-            'SftRolesRegistry: nft is delegated'
-        );
-        require(
-            rolesGranted[_nonce].length() == 0,
+            lists.items[lists.heads[_nonce]].data.expirationDate < block.timestamp,
             'SftRolesRegistry: all roles must be revoked before withdrawing'
         );
 
