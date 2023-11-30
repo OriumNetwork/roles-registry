@@ -2,41 +2,45 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from "./interfaces/IERCXXXX.sol";
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import { IERC1155 } from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import { IERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-import { ERC1155Holder, ERC1155Receiver } from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import { LinkedLists } from "./libraries/LinkedLists.sol";
+import { IERCXXXX } from './interfaces/IERCXXXX.sol';
+import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
+import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
+import { IERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
+import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
+import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
 // Semi-fungible token (SFT) roles registry
 contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
-    using LinkedLists for LinkedLists.Lists;
-    using LinkedLists for LinkedLists.ListItem;
-
-    LinkedLists.Lists internal lists;
+    // nonce => RoleData
+    mapping(uint256 => IERCXXXX.RoleData) items;
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
     modifier validExpirationDate(uint64 _expirationDate) {
-        require(_expirationDate > block.timestamp, "SftRolesRegistry: expiration date must be in the future");
+        require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
         _;
     }
 
-    modifier onlyOwnerOrApprovedWithBalance(address _account, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) {
-        require(_tokenAmount > 0, "SftRolesRegistry: tokenAmount must be greater than zero");
+    modifier onlyOwnerOrApprovedWithBalance(
+        address _account,
+        address _tokenAddress,
+        uint256 _tokenId,
+        uint256 _tokenAmount
+    ) {
+        require(_tokenAmount > 0, 'SftRolesRegistry: tokenAmount must be greater than zero');
         require(
             _account == msg.sender || isRoleApprovedForAll(_tokenAddress, _account, msg.sender),
-            "SftRolesRegistry: account not approved"
+            'SftRolesRegistry: account not approved'
         );
         _;
     }
 
     /** External Functions **/
 
-    function grantRoleFrom(RoleAssignment calldata _roleAssignment)
+    function grantRoleFrom(
+        RoleAssignment calldata _roleAssignment
+    )
         external
         override
         validExpirationDate(_roleAssignment.expirationDate)
@@ -47,7 +51,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.tokenAmount
         )
     {
-
+        require(_roleAssignment.nonce != 0, 'LinkedLists: invalid nonce');
         bytes32 hash = _hashRoleData(
             _roleAssignment.nonce,
             _roleAssignment.role,
@@ -56,9 +60,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.grantor
         );
 
-        bytes32 rootKey = _getHeadKey(_roleAssignment.grantee, _roleAssignment.role, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
-        LinkedLists.ListItem storage item = lists.items[_roleAssignment.nonce];
-        if (item.data.expirationDate == 0) {
+        RoleData memory item = items[_roleAssignment.nonce];
+        if (item.expirationDate == 0) {
             // nonce is not being used
 
             _transferFrom(
@@ -68,69 +71,39 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
                 _roleAssignment.tokenId,
                 _roleAssignment.tokenAmount
             );
-
         } else {
             // nonce is being used
-            require(item.data.hash == hash, "SftRolesRegistry: nonce exist, but data mismatch"); // validates nonce, role, tokenAddress, tokenId, grantor
-            require(item.data.expirationDate < block.timestamp || item.data.revocable, "SftRolesRegistry: nonce is not expired or is not revocable");
+            require(item.hash == hash, 'SftRolesRegistry: nonce exist, but data mismatch'); // validates nonce, role, tokenAddress, tokenId, grantor
+            require(
+                item.expirationDate < block.timestamp || item.revocable,
+                'SftRolesRegistry: nonce is not expired or is not revocable'
+            );
 
             // deposit or withdraw tokens
             _depositOrWithdrawTokens(
                 _roleAssignment.tokenAddress,
                 _roleAssignment.tokenId,
                 _roleAssignment.grantor,
-                item.data.tokenAmount,
+                item.tokenAmount,
                 _roleAssignment.tokenAmount
             );
 
-            // remove from the list
-            lists.remove(rootKey, _roleAssignment.nonce);
+            // remove from the listf
+            delete items[_roleAssignment.nonce];
         }
 
         // insert on the list
-        _insert(hash, rootKey, _roleAssignment);
+        _insert(_roleAssignment, hash);
     }
 
-    function _depositOrWithdrawTokens(
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _account,
-        uint256 _depositedAmount,
-        uint256 _amountRequired
-    ) internal {
-        if (_depositedAmount > _amountRequired) {
-            // return leftover tokens
-            uint256 tokensToReturn = _depositedAmount - _amountRequired;
-            _transferFrom(
-                address(this),
-                _account,
-                _tokenAddress,
-                _tokenId,
-                tokensToReturn
-            );
-        } else if (_amountRequired > _depositedAmount) {
-            // deposit missing tokens
-            uint256 tokensToDeposit = _amountRequired - _depositedAmount;
-            _transferFrom(
-                _account,
-                address(this),
-                _tokenAddress,
-                _tokenId,
-                tokensToDeposit
-            );
-        }
-    }
-
-    function _insert(bytes32 _hash, bytes32 _rootKey, RoleAssignment calldata _roleAssignment) internal {
-        RoleData memory data = RoleData(
+    function _insert(RoleAssignment calldata _roleAssignment, bytes32 _hash) internal {
+        items[_roleAssignment.nonce] = RoleData(
             _hash,
             _roleAssignment.tokenAmount,
             _roleAssignment.expirationDate,
             _roleAssignment.revocable,
             _roleAssignment.data
         );
-
-        lists.insert(_rootKey, _roleAssignment.nonce, data);
 
         emit RoleGranted(
             _roleAssignment.nonce,
@@ -144,20 +117,40 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _roleAssignment.revocable,
             _roleAssignment.data
         );
+    }
 
+    function _depositOrWithdrawTokens(
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _account,
+        uint256 _depositedAmount,
+        uint256 _amountRequired
+    ) internal {
+        if (_depositedAmount > _amountRequired) {
+            // return leftover tokens
+            uint256 tokensToReturn = _depositedAmount - _amountRequired;
+            _transferFrom(address(this), _account, _tokenAddress, _tokenId, tokensToReturn);
+        } else if (_amountRequired > _depositedAmount) {
+            // deposit missing tokens
+            uint256 tokensToDeposit = _amountRequired - _depositedAmount;
+            _transferFrom(_account, address(this), _tokenAddress, _tokenId, tokensToDeposit);
+        }
     }
 
     function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external override {
-        LinkedLists.ListItem storage item = lists.items[_revokeRoleData.nonce];
-        require(item.data.hash == _hashRoleData(_revokeRoleData), "SftRolesRegistry: could not find role assignment");
+        RoleData memory item = items[_revokeRoleData.nonce];
+        require(item.hash == _hashRoleData(_revokeRoleData), 'SftRolesRegistry: could not find role assignment');
 
         address caller = _findCaller(_revokeRoleData);
-        if (item.data.expirationDate > block.timestamp && !item.data.revocable) {
+        if (item.expirationDate > block.timestamp && !item.revocable) {
             // if role is not expired and is not revocable, only the grantee can revoke it
-            require(caller == _revokeRoleData.grantee, "SftRolesRegistry: role is not revocable or caller is not the approved");
+            require(
+                caller == _revokeRoleData.grantee,
+                'SftRolesRegistry: role is not revocable or caller is not the approved'
+            );
         }
 
-        uint256 tokensToReturn = item.data.tokenAmount;
+        uint256 tokensToReturn = item.tokenAmount;
         _transferFrom(
             address(this),
             _revokeRoleData.revoker,
@@ -166,10 +159,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             tokensToReturn
         );
 
-        bytes32 rootKey = _getHeadKey(_revokeRoleData.grantee, _revokeRoleData.role, _revokeRoleData.tokenAddress, _revokeRoleData.tokenId);
-
         // remove from the list
-        lists.remove(rootKey, _revokeRoleData.nonce);
+        delete items[_revokeRoleData.nonce];
 
         emit RoleRevoked(
             _revokeRoleData.nonce,
@@ -190,11 +181,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     /** View Functions **/
 
     function roleData(uint256 _nonce) external view returns (RoleData memory) {
-        return lists.items[_nonce].data;
+        return items[_nonce];
     }
 
     function roleExpirationDate(uint256 _nonce) external view returns (uint64 expirationDate_) {
-        return lists.items[_nonce].data.expirationDate;
+        return items[_nonce].expirationDate;
     }
 
     function isRoleApprovedForAll(
@@ -205,30 +196,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
         return tokenApprovals[_grantor][_tokenAddress][_operator];
     }
 
-    function roleBalanceOf(
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _grantee
-    ) external view returns (uint256 balance_) {
-        bytes32 rootKey = _getHeadKey(_grantee, _role, _tokenAddress, _tokenId);
-        uint256 currentNonce = lists.heads[rootKey];
-        if (currentNonce == 0) {
-            return 0;
-        }
-
-        balance_ = 0;
-        LinkedLists.ListItem storage currentItem;
-        while (currentNonce != 0) {
-            currentItem = lists.items[currentNonce];
-            if (currentItem.data.expirationDate < block.timestamp) {
-                return balance_;
-            }
-            balance_ += currentItem.data.tokenAmount;
-            currentNonce = currentItem.next;
-        }
-    }
-
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
@@ -237,28 +204,40 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     /** Helper Functions **/
 
-    function _transferFrom(address _from, address _to, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount) internal {
-        IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, "");
+    function _transferFrom(
+        address _from,
+        address _to,
+        address _tokenAddress,
+        uint256 _tokenId,
+        uint256 _tokenAmount
+    ) internal {
+        IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, '');
     }
 
     function _hashRoleData(RevokeRoleData calldata _revokeRoleData) internal pure returns (bytes32) {
-        return _hashRoleData(
-            _revokeRoleData.nonce,
-            _revokeRoleData.role,
-            _revokeRoleData.tokenAddress,
-            _revokeRoleData.tokenId,
-            _revokeRoleData.revoker
-        );
+        return
+            _hashRoleData(
+                _revokeRoleData.nonce,
+                _revokeRoleData.role,
+                _revokeRoleData.tokenAddress,
+                _revokeRoleData.tokenId,
+                _revokeRoleData.revoker
+            );
     }
 
     function _hashRoleData(
-        uint256 _nonce, bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantor
+        uint256 _nonce,
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantor
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(_nonce, _role, _tokenAddress, _tokenId, _grantor));
     }
 
     function _findCaller(RevokeRoleData calldata _revokeRoleData) internal view returns (address) {
-        if (_revokeRoleData.revoker == msg.sender ||
+        if (
+            _revokeRoleData.revoker == msg.sender ||
             isRoleApprovedForAll(_revokeRoleData.tokenAddress, _revokeRoleData.revoker, msg.sender)
         ) {
             return _revokeRoleData.revoker;
@@ -271,13 +250,15 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             return _revokeRoleData.grantee;
         }
 
-        revert("SftRolesRegistry: sender must be approved");
+        revert('SftRolesRegistry: sender must be approved');
     }
 
     function _getHeadKey(
-        address _grantee, bytes32 _role, address _tokenAddress, uint256 _tokenId
+        address _grantee,
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId
     ) internal pure returns (bytes32 rootKey_) {
         return keccak256(abi.encodePacked(_grantee, _role, _tokenAddress, _tokenId));
     }
-
 }

@@ -119,13 +119,4 @@ interface IERCXXXX is IERC165 {
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
     function isRoleApprovedForAll(address _tokenAddress, address _grantor, address _operator) external view returns (bool);
-
-    /// @notice Calculates the amount of ERC-1155 tokens delegated to the specified _grantee.
-    /// @param _role The role identifier.
-    /// @param _tokenAddress The token address.
-    /// @param _tokenId The token identifier.
-    /// @param _grantee The user that received the role.
-    function roleBalanceOf(
-        bytes32 _role, address _tokenAddress, uint256 _tokenId, address _grantee
-    ) external view returns (uint256 balance_);
 }

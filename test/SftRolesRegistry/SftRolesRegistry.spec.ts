@@ -581,28 +581,6 @@ describe('SftRolesRegistry', async () => {
     it('should return the expiration date', async () => {
       expect(await SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce)).to.be.equal(RoleAssignment.expirationDate)
     })
-
-    it('should return balance zero if grantee has no roles', async () => {
-      expect(
-        await SftRolesRegistry.roleBalanceOf(
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          AddressZero,
-        ),
-      ).to.be.equal(0)
-    })
-
-    it("should return the grantee's balance of tokens", async () => {
-      expect(
-        await SftRolesRegistry.roleBalanceOf(
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          RoleAssignment.grantee,
-        ),
-      ).to.be.equal(RoleAssignment.tokenAmount)
-    })
   })
 
   describe('ERC-165 supportsInterface', async () => {
