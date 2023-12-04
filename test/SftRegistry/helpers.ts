@@ -11,7 +11,7 @@ export const ONE_DAY = 60 * 60 * 24
 export async function buildRoleAssignment({
   // default values
   nonce = generateRandomInt(),
-  role = 'Role()',
+  role = 'UNIQUE_ROLE',
   tokenAddress = AddressZero,
   tokenId = generateRandomInt(),
   tokenAmount = generateRandomInt(),
