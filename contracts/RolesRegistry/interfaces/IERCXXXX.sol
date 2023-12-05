@@ -134,8 +134,4 @@ interface IERCXXXX is IERC165 {
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
     function isRoleApprovedForAll(address _tokenAddress, address _grantor, address _operator) external view returns (bool);
-
-    /// @notice Returns the deposit info of a role assignment.
-    /// @param _nonce The identifier of the role assignment.
-    function depositInfoOf(uint256 _nonce) external view returns (DepositInfo memory);
 }

@@ -201,10 +201,6 @@ contract SftRegistry is IERCXXXX, ERC1155Holder {
         return roleAssignments[_nonce].expirationDate;
     }
 
-    function depositInfoOf(uint256 _nonce) external view returns (DepositInfo memory) {
-        return deposits[_nonce];
-    }
-
     function isRoleApprovedForAll(
         address _tokenAddress,
         address _grantor,

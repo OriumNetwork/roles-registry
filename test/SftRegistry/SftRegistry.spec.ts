@@ -544,7 +544,7 @@ describe('SftRegistry', async () => {
     })
   })
 
-  describe.only('withdraw', async function () {
+  describe('withdraw', async function () {
     let RoleAssignment: RoleAssignment
     let RevokeRoleData: RevokeRoleData
 
@@ -577,8 +577,36 @@ describe('SftRegistry', async () => {
         .withArgs(
           RevokeRoleData.nonce,
           RevokeRoleData.revoker,
-          RevokeRoleData.tokenAddress,
           RevokeRoleData.tokenId,
+          RevokeRoleData.tokenAddress,
+          RoleAssignment.tokenAmount,
+        )
+    })
+    it('should not revert if nonce has a role revoked', async () => {
+      await time.increase(ONE_DAY)
+      await SftRegistry.connect(grantor).revokeRoleFrom(RevokeRoleData.nonce, RevokeRoleData.role)
+      await expect(SftRegistry.connect(grantor).withdraw(RevokeRoleData.nonce))
+        .to.emit(SftRegistry, 'Withdrew')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RevokeRoleData.tokenAddress,
+          RoleAssignment.tokenAmount,
+        )
+    })
+    it('shoudl not revert if nonce has a revocable role', async () => {
+      await time.increase(ONE_DAY)
+      RoleAssignment.revocable = true
+      RoleAssignment.expirationDate = (await time.latest()) + ONE_DAY
+      await SftRegistry.connect(grantor).grantRoleFrom(RoleAssignment)
+      await expect(SftRegistry.connect(grantor).withdraw(RevokeRoleData.nonce))
+        .to.emit(SftRegistry, 'Withdrew')
+        .withArgs(
+          RevokeRoleData.nonce,
+          RevokeRoleData.revoker,
+          RevokeRoleData.tokenId,
+          RevokeRoleData.tokenAddress,
           RoleAssignment.tokenAmount,
         )
     })
