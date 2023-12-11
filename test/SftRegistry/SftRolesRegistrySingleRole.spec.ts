@@ -2,16 +2,15 @@ import { ethers } from 'hardhat'
 import { Contract } from 'ethers'
 import { beforeEach } from 'mocha'
 import { expect } from 'chai'
-import { solidityKeccak256 } from 'ethers/lib/utils'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, ONE_DAY, generateRoleId, buildRevokeRoleData } from './helpers'
+import { buildRoleAssignment, ONE_DAY, buildRevokeRoleData } from './helpers'
 import { RoleAssignment, RevokeRoleData } from './types'
 import { generateRandomInt } from '../helpers'
 
 const { AddressZero } = ethers.constants
 
-describe('SftRolesRegistry', async () => {
+describe('SftRolesRegistrySingleRole', async () => {
   let SftRolesRegistry: Contract
   let MockToken: Contract
   let grantor: SignerWithAddress
@@ -19,7 +18,7 @@ describe('SftRolesRegistry', async () => {
   let anotherUser: SignerWithAddress
 
   async function deployContracts() {
-    const SftRegistryFactory = await ethers.getContractFactory('SftRolesRegistry')
+    const SftRegistryFactory = await ethers.getContractFactory('SftRolesRegistrySingleRole')
     SftRolesRegistry = await SftRegistryFactory.deploy()
     const MockTokenFactory = await ethers.getContractFactory('MockERC1155')
     MockToken = await MockTokenFactory.deploy()
@@ -156,6 +155,38 @@ describe('SftRolesRegistry', async () => {
             roleAssignment.data,
           )
       })
+      it('should revert if grantor tries to update a grant with a nonce that its not theirs', async function () {
+        const roleAssignment = await buildRoleAssignment({
+          tokenAddress: MockToken.address,
+          grantor: grantor.address,
+        })
+        await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
+        await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+        await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
+          roleAssignment.tokenAddress,
+          anotherUser.address,
+          true,
+        )
+        await expect(SftRolesRegistry.connect(anotherUser).grantRoleFrom(roleAssignment))
+          .to.emit(SftRolesRegistry, 'RoleGranted')
+          .withArgs(
+            roleAssignment.nonce,
+            roleAssignment.role,
+            roleAssignment.tokenAddress,
+            roleAssignment.tokenId,
+            roleAssignment.tokenAmount,
+            roleAssignment.grantor,
+            roleAssignment.grantee,
+            roleAssignment.expirationDate,
+            roleAssignment.revocable,
+            roleAssignment.data,
+          )
+
+        roleAssignment.grantor = anotherUser.address
+        await expect(SftRolesRegistry.connect(anotherUser).grantRoleFrom(roleAssignment)).to.be.revertedWith(
+          'SftRolesRegistry: grantor mismatch',
+        )
+      })
     })
   })
 
@@ -185,47 +216,6 @@ describe('SftRolesRegistry', async () => {
         )
     })
 
-    it.skip('should revert if hash is different', async () => {
-      // hash validates role, tokenAddress, tokenId, grantor
-
-      // different role
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          role: generateRoleId('Role(uint256 newArg)'),
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: nonce exist, but data mismatch')
-
-      // tokenAddress
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          tokenAddress: AddressZero,
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: nonce exist, but data mismatch')
-
-      // tokenId
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          tokenId: generateRandomInt(),
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: nonce exist, but data mismatch')
-
-      // grantor
-      await SftRolesRegistry.connect(anotherUser).setRoleApprovalForAll(
-        RoleAssignment.tokenAddress,
-        grantor.address,
-        true,
-      )
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          grantor: anotherUser.address,
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: nonce exist, but data mismatch')
-    })
-
     it('should revert if nonce is not expired', async () => {
       const revocableRoleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
@@ -250,71 +240,29 @@ describe('SftRolesRegistry', async () => {
       ).to.be.revertedWith('ERC1155: insufficient balance for transfer')
     })
 
-    it.skip('should grant role if tokens deposited are greater than requested', async () => {
-      const newTokenAmount = RoleAssignment.tokenAmount - 1
+    it('should revert if tokenAddress mismatch', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRoleFrom({
           ...RoleAssignment,
-          tokenAmount: newTokenAmount,
+          tokenAddress: anotherUser.address,
         }),
-      )
-        .to.emit(SftRolesRegistry, 'RoleGranted')
-        .withArgs(
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          newTokenAmount,
-          RoleAssignment.grantor,
-          RoleAssignment.grantee,
-          RoleAssignment.expirationDate,
-          RoleAssignment.revocable,
-          RoleAssignment.data,
-        )
-        // transfer leftover tokens to grantor
-        .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.address,
-          SftRolesRegistry.address,
-          RoleAssignment.grantor,
-          RoleAssignment.tokenId,
-          RoleAssignment.tokenAmount - newTokenAmount,
-        )
+      ).to.be.revertedWith('SftRolesRegistry: tokenAddress mismatch')
     })
-
-    it.skip('should grant role if tokens deposited are lower than deposited (but grantor deposits more)', async () => {
-      const additionalAmount = 1
-      const newTokenAmount = RoleAssignment.tokenAmount + additionalAmount
-      await MockToken.mint(grantor.address, RoleAssignment.tokenId, additionalAmount)
-
+    it('should revert if tokenId mismatch', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRoleFrom({
           ...RoleAssignment,
-          tokenAmount: newTokenAmount,
+          tokenId: generateRandomInt(),
         }),
-      )
-        .to.emit(SftRolesRegistry, 'RoleGranted')
-        .withArgs(
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          newTokenAmount,
-          RoleAssignment.grantor,
-          RoleAssignment.grantee,
-          RoleAssignment.expirationDate,
-          RoleAssignment.revocable,
-          RoleAssignment.data,
-        )
-        // transfer additional tokens to contract
-        .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.address,
-          RoleAssignment.grantor,
-          SftRolesRegistry.address,
-          RoleAssignment.tokenId,
-          additionalAmount,
-        )
+      ).to.be.revertedWith('SftRolesRegistry: tokenId mismatch')
+    })
+    it('should revert if tokenAmount mismatch', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRoleFrom({
+          ...RoleAssignment,
+          tokenAmount: generateRandomInt(),
+        }),
+      ).to.be.revertedWith('SftRolesRegistry: tokenAmount mismatch')
     })
 
     it('should grant role if tokens deposited are equal to tokens requested', async () => {
@@ -351,51 +299,6 @@ describe('SftRolesRegistry', async () => {
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
       await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
-    })
-
-    it.skip('should revert when hash is invalid', async () => {
-      // hash validates nonce, role, tokenAddress, tokenId and revoker
-
-      // nonce
-      await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          generateRandomInt(),
-          RevokeRoleData.role,
-          RevokeRoleData.grantee,
-        ),
-      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
-
-      // role
-      await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          RevokeRoleData.nonce,
-          solidityKeccak256(['string'], ['Role(uint256 newArg)']),
-          RevokeRoleData.grantee,
-        ),
-      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
-
-      // tokenAddress
-      await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom({
-          ...RevokeRoleData,
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
-
-      /*      // tokenId
-      await expect(
-        SftRolesRegistry.sol.connect(grantor).revokeRoleFrom({
-          ...RevokeRoleData,
-          tokenId: generateRandomInt(),
-        }),
-      ).to.be.revertedWith('SftRolesRegistry.sol: could not find role assignment')
- */
-      // revoker
-      /*       await expect(
-        SftRolesRegistry.sol.connect(grantor).revokeRoleFrom({
-          ...RevokeRoleData,
-          revoker: anotherUser.address,
-        }),
-      ).to.be.revertedWith('SftRolesRegistry.sol: could not find role assignment') */
     })
 
     it('should revert if grantee is invalid', async () => {
@@ -468,15 +371,6 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.revoker,
           RevokeRoleData.grantee,
         )
-      // transfer tokens back to owner
-      /*  .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.sol.address,
-          SftRolesRegistry.sol.address,
-          RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-        ) */
     })
 
     it('should revoke role if sender is approved by grantor', async () => {
@@ -502,15 +396,6 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.revoker,
           RevokeRoleData.grantee,
         )
-      // transfer tokens back to owner
-      /* .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.sol.address,
-          SftRolesRegistry.sol.address,
-          RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-        ) */
     })
     it('should revoke role if sender is approved by grantee', async () => {
       await SftRolesRegistry.connect(grantee).setRoleApprovalForAll(
@@ -535,15 +420,6 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.revoker,
           RevokeRoleData.grantee,
         )
-      // transfer tokens back to owner
-      /*         .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.sol.address,
-          SftRolesRegistry.sol.address,
-          RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-        ) */
     })
 
     it('should revoke role if sender is grantee', async () => {
@@ -577,15 +453,6 @@ describe('SftRolesRegistry', async () => {
           newRevokeRoleData.revoker,
           newRevokeRoleData.grantee,
         )
-      // transfer tokens back to owner
-      /*         .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.sol.address,
-          SftRolesRegistry.sol.address,
-          RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-        ) */
     })
   })
 
@@ -696,18 +563,7 @@ describe('SftRolesRegistry', async () => {
         RoleAssignment.role,
         RoleAssignment.grantee,
       )
-      /*       const hash = ethers.utils.defaultAbiCoder.encode(
-        ['uint256', 'bytes32', 'address', 'uint256', 'address'],
-        [
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          RoleAssignment.grantor,
-        ],
-      )
-      expect(roleData.hash).to.be.equal(ethers.utils.keccak256(hash)) */
-      /* expect(roleData.tokenAmount).to.be.equal(RoleAssignment.tokenAmount) */
+
       expect(roleData.expirationDate).to.be.equal(RoleAssignment.expirationDate)
       expect(roleData.revocable).to.be.equal(RoleAssignment.revocable)
       expect(roleData.data).to.be.equal(RoleAssignment.data)

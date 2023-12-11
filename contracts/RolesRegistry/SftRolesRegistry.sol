@@ -10,7 +10,7 @@ import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ER
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
 // Semi-fungible token (SFT) registry with only one role (UNIQUE_ROLE)
-contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
+contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     bytes32 public constant UNIQUE_ROLE = keccak256('UNIQUE_ROLE');
 
     // grantor => tokenAddress => operator => isApproved
@@ -19,8 +19,8 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     // nonce => DepositInfo
     mapping(uint256 => DepositInfo) public deposits;
 
-    // nonce => role => RoleAssignment
-    mapping(uint256 => mapping(bytes32 => RoleData)) internal roleAssignments;
+    // nonce => RoleAssignment
+    mapping(uint256 => RoleData) internal roleAssignments;
 
     modifier validExpirationDate(uint64 _expirationDate) {
         require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
@@ -54,7 +54,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _grantRoleData.tokenAmount
         )
     {
-        require(_grantRoleData.role == UNIQUE_ROLE, 'SftRolesRegistry: role not supported');
         require(_grantRoleData.nonce > 0, 'SftRolesRegistry: nonce must be greater than zero');
 
         if (deposits[_grantRoleData.nonce].grantor == address(0)) {
@@ -71,18 +70,19 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
         } else {
             // nonce exists
+            require(deposits[_grantRoleData.nonce].grantor == _grantRoleData.grantor, "SftRolesRegistry: grantor mismatch");
             require(deposits[_grantRoleData.nonce].tokenAddress == _grantRoleData.tokenAddress, "SftRolesRegistry: tokenAddress mismatch");
             require(deposits[_grantRoleData.nonce].tokenId == _grantRoleData.tokenId, "SftRolesRegistry: tokenId mismatch");
             require(deposits[_grantRoleData.nonce].tokenAmount == _grantRoleData.tokenAmount, "SftRolesRegistry: tokenAmount mismatch");
 
-            RoleData storage _roleData = roleAssignments[_grantRoleData.nonce][_grantRoleData.role];
+            RoleData storage _roleData = roleAssignments[_grantRoleData.nonce];
             require(_roleData.expirationDate < block.timestamp || _roleData.revocable, "SftRolesRegistry: nonce is not expired or is not revocable");
         }
         _grantOrUpdateRole(_grantRoleData);
     }
 
     function _grantOrUpdateRole(RoleAssignment calldata _grantRoleData) internal {
-        roleAssignments[_grantRoleData.nonce][_grantRoleData.role] = RoleData(
+        roleAssignments[_grantRoleData.nonce] = RoleData(
             _grantRoleData.grantee,
             _grantRoleData.expirationDate,
             _grantRoleData.revocable,
@@ -91,7 +91,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
         emit RoleGranted(
             _grantRoleData.nonce,
-            _grantRoleData.role,
+            UNIQUE_ROLE,
             _grantRoleData.tokenAddress,
             _grantRoleData.tokenId,
             _grantRoleData.tokenAmount,
@@ -106,14 +106,6 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     function _deposit(uint256 _nonce, DepositInfo memory _depositInfo) internal {
         deposits[_nonce] = _depositInfo;
 
-        emit Deposited(
-            _nonce,
-            _depositInfo.tokenAddress,
-            _depositInfo.tokenId,
-            _depositInfo.tokenAmount,
-            _depositInfo.grantor
-        );
-
         _transferFrom(
             _depositInfo.grantor,
             address(this),
@@ -124,7 +116,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     }
 
     function revokeRoleFrom(uint256 _nonce, bytes32 _role, address _grantee) external override {
-        RoleData memory _roleData = roleAssignments[_nonce][_role];
+        RoleData memory _roleData = roleAssignments[_nonce];
         require(_roleData.grantee != address(0), 'SftRolesRegistry: invalid grantee');
         DepositInfo memory _depositInfo = deposits[_nonce];
 
@@ -134,7 +126,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             require(caller == _roleData.grantee, 'SftRolesRegistry: nonce is not expired or is not revocable');
         }
 
-        delete roleAssignments[_nonce][_role];
+        delete roleAssignments[_nonce];
 
         emit RoleRevoked(
             _nonce,
@@ -158,14 +150,14 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     {
         DepositInfo memory _depositInfo = deposits[_nonce];
         require(
-            roleAssignments[_nonce][UNIQUE_ROLE].grantee == address(0) ||
-                roleAssignments[_nonce][UNIQUE_ROLE].expirationDate < block.timestamp ||
-                roleAssignments[_nonce][UNIQUE_ROLE].revocable,
+            roleAssignments[_nonce].grantee == address(0) ||
+                roleAssignments[_nonce].expirationDate < block.timestamp ||
+                roleAssignments[_nonce].revocable,
             'SftRolesRegistry: token has an active role'
         );
 
         delete deposits[_nonce];
-        delete roleAssignments[_nonce][UNIQUE_ROLE];
+        delete roleAssignments[_nonce];
 
         _transferFrom(
             address(this),
@@ -192,11 +184,11 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
     /** View Functions **/
 
     function roleData(uint256 _nonce, bytes32 _role, address _grantee) external view returns (RoleData memory) {
-        return roleAssignments[_nonce][_role];
+        return roleAssignments[_nonce];
     }
 
     function roleExpirationDate(uint256 _nonce, bytes32 _role, address _grantee) external view returns (uint64 expirationDate_) {
-        return roleAssignments[_nonce][_role].expirationDate;
+        return roleAssignments[_nonce].expirationDate;
     }
 
     function isRoleApprovedForAll(
