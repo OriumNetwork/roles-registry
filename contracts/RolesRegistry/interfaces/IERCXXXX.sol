@@ -8,19 +8,18 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
 /// Note: the ERC-165 identifier for this interface is 0xTBD
 interface IERCXXXX is IERC165 {
+    struct RoleData {
+        address grantee;
+        uint64 expirationDate;
+        bool revocable;
+        bytes data;
+    }
 
     struct DepositInfo {
         address grantor;
         address tokenAddress;
         uint256 tokenId;
         uint256 tokenAmount;
-    }
-    struct RoleData {
-        bytes32 role;
-        address grantee;
-        uint64 expirationDate;
-        bool revocable;
-        bytes data;
     }
 
     struct RoleAssignment {
@@ -111,7 +110,8 @@ interface IERCXXXX is IERC165 {
     /// @notice Revokes a role on behalf of a user.
     /// @param _nonce The identifier of the role assignment.
     /// @param _role The role identifier.
-    function revokeRoleFrom(uint256 _nonce, bytes32 _role) external;
+    /// @param _grantee The user that gets their role revoked.
+    function revokeRoleFrom(uint256 _nonce, bytes32 _role, address _grantee) external;
 
     /// @notice Approves operator to grant and revoke any roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -123,11 +123,15 @@ interface IERCXXXX is IERC165 {
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _nonce The identifier of the role assignment.
-    function roleData(uint256 _nonce, bytes32 _role) external view returns (RoleData memory data_);
+    /// @param _role The role identifier.
+    /// @param _grantee The user that gets their role revoked.
+    function roleData(uint256 _nonce, bytes32 _role, address _grantee) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _nonce The identifier of the role assignment.
-    function roleExpirationDate(uint256 _nonce, bytes32 _role) external view returns (uint64 expirationDate_);
+    /// @param _role The role identifier.
+    /// @param _grantee The user that gets their role revoked.
+    function roleExpirationDate(uint256 _nonce, bytes32 _role, address _grantee) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.
