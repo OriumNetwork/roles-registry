@@ -318,7 +318,7 @@ describe('SftRolesRegistrySingleRole', async () => {
           newRevokeRoleData.role,
           newRevokeRoleData.grantee,
         ),
-      ).to.be.revertedWith('SftRolesRegistry: invalid grantee')
+      ).to.be.revertedWith('SftRolesRegistry: nonce not used')
     })
 
     it('should revert if nonce is not expired and is not revocable', async () => {
@@ -491,7 +491,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revert if nonce does not exist', async () => {
       await expect(SftRolesRegistry.connect(grantor).withdraw(generateRandomInt())).to.be.revertedWith(
-        'SftRolesRegistry: tokenAmount must be greater than zero',
+        'SftRolesRegistry: account not approved',
       )
     })
 
@@ -502,8 +502,8 @@ describe('SftRolesRegistrySingleRole', async () => {
         .withArgs(
           RevokeRoleData.nonce,
           RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
           RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
     })
@@ -520,8 +520,8 @@ describe('SftRolesRegistrySingleRole', async () => {
         .withArgs(
           RevokeRoleData.nonce,
           RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
           RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
     })
@@ -536,8 +536,8 @@ describe('SftRolesRegistrySingleRole', async () => {
         .withArgs(
           RevokeRoleData.nonce,
           RevokeRoleData.revoker,
-          RevokeRoleData.tokenId,
           RevokeRoleData.tokenAddress,
+          RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
     })
@@ -573,28 +573,6 @@ describe('SftRolesRegistrySingleRole', async () => {
       expect(
         await SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce, RoleAssignment.role, RoleAssignment.grantee),
       ).to.be.equal(RoleAssignment.expirationDate)
-    })
-
-    it.skip('should return balance zero if grantee has no roles', async () => {
-      expect(
-        await SftRolesRegistry.roleBalanceOf(
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          AddressZero,
-        ),
-      ).to.be.equal(0)
-    })
-
-    it.skip("should return the grantee's balance of tokens", async () => {
-      expect(
-        await SftRolesRegistry.roleBalanceOf(
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          RoleAssignment.grantee,
-        ),
-      ).to.be.equal(RoleAssignment.tokenAmount)
     })
   })
 
