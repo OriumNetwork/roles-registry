@@ -51,6 +51,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     it('should revert when sender is not grantor or approved', async () => {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
+        grantee: grantee.address,
       })
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
         'SftRolesRegistry: account not approved',
@@ -61,6 +62,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
+        grantee: grantee.address,
       })
       await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
@@ -81,6 +83,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       const roleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
+        grantee: grantee.address,
         tokenAmount: 100,
       })
       await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount - 10)
@@ -113,7 +116,20 @@ describe('SftRolesRegistrySingleRole', async () => {
       await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: invalid role',
+        'SftRolesRegistry: role not supported',
+      )
+    })
+
+    it('should revert if grantee is zero address', async () => {
+      const roleAssignment = await buildRoleAssignment({
+        grantee: AddressZero,
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+      })
+      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
+        'SftRolesRegistry: grantee must not be zero address',
       )
     })
 
@@ -122,6 +138,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         const roleAssignment = await buildRoleAssignment({
           tokenAddress: MockToken.address,
           grantor: grantor.address,
+          grantee: grantee.address,
         })
         await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
         await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
@@ -145,6 +162,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         const roleAssignment = await buildRoleAssignment({
           tokenAddress: MockToken.address,
           grantor: grantor.address,
+          grantee: grantee.address,
         })
         await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
         await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
@@ -172,6 +190,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         const roleAssignment = await buildRoleAssignment({
           tokenAddress: MockToken.address,
           grantor: grantor.address,
+          grantee: grantee.address,
         })
         await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
         await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
@@ -210,6 +229,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       RoleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
+        grantee: grantee.address,
       })
       await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
@@ -233,6 +253,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       const revocableRoleAssignment = await buildRoleAssignment({
         tokenAddress: MockToken.address,
         grantor: grantor.address,
+        grantee: grantee.address,
         revocable: false,
       })
 
@@ -330,7 +351,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(newRevokeRoleData.nonce, newRevokeRoleData.role, AddressZero),
-      ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
+      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
     })
 
     it('should revert if nonce is not expired and is not revocable', async () => {
@@ -401,7 +422,7 @@ describe('SftRolesRegistrySingleRole', async () => {
           newRoleAssignment.role,
           newRoleAssignment.grantee,
         ),
-      ).to.be.revertedWith('SftRolesRegistry: invalid role')
+      ).to.be.revertedWith('SftRolesRegistry: role not supported')
     })
 
     it('should revoke role if sender is approved by grantor', async () => {
@@ -605,12 +626,12 @@ describe('SftRolesRegistrySingleRole', async () => {
       it('should revert if role is not UNIQUE_ROLE', async () => {
         await expect(
           SftRolesRegistry.roleData(RoleAssignment.nonce, generateRoleId('NOT_UNIQUE_ROLE'), RoleAssignment.grantee),
-        ).to.be.revertedWith('SftRolesRegistry: invalid role')
+        ).to.be.revertedWith('SftRolesRegistry: role not supported')
       })
       it('should revert if grantee is invalid', async () => {
         await expect(
           SftRolesRegistry.roleData(RoleAssignment.nonce, RoleAssignment.role, AddressZero),
-        ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
+        ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
       })
     })
 
@@ -627,12 +648,12 @@ describe('SftRolesRegistrySingleRole', async () => {
             generateRoleId('NOT_UNIQUE_ROLE'),
             RoleAssignment.grantee,
           ),
-        ).to.be.revertedWith('SftRolesRegistry: invalid role')
+        ).to.be.revertedWith('SftRolesRegistry: role not supported')
       })
       it('should revert if grantee is invalid', async () => {
         await expect(
           SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce, RoleAssignment.role, AddressZero),
-        ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
+        ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
       })
     })
   })
