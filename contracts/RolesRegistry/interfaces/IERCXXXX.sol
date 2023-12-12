@@ -110,10 +110,8 @@ interface IERCXXXX is IERC165 {
     function grantRoleFrom(RoleAssignment calldata _roleAssignment) external;
 
     /// @notice Revokes a role on behalf of a user.
-    /// @param _nonce The identifier of the role assignment.
-    /// @param _role The role identifier.
-    /// @param _grantee The user that gets their role revoked.
-    function revokeRoleFrom(uint256 _nonce, bytes32 _role, address _grantee) external;
+    /// @param _revokeRoleData The role revocation data.
+    function revokeRoleFrom(RevokeRoleData calldata _revokeRoleData) external;
 
     /// @notice Approves operator to grant and revoke any roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -125,15 +123,11 @@ interface IERCXXXX is IERC165 {
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _nonce The identifier of the role assignment.
-    /// @param _role The role identifier.
-    /// @param _grantee The user that gets their role revoked.
-    function roleData(uint256 _nonce, bytes32 _role, address _grantee) external view returns (RoleData memory data_);
+    function roleData(uint256 _nonce) external view returns (RoleData memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _nonce The identifier of the role assignment.
-    /// @param _role The role identifier.
-    /// @param _grantee The user that gets their role revoked.
-    function roleExpirationDate(uint256 _nonce, bytes32 _role, address _grantee) external view returns (uint64 expirationDate_);
+    function roleExpirationDate(uint256 _nonce) external view returns (uint64 expirationDate_);
 
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.
