@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from './interfaces/IERCXXXX.sol';
+import { ISftRolesRegistry } from './interfaces/ISftRolesRegistry.sol';
 import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import { IERC1155Receiver } from '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
@@ -10,7 +10,7 @@ import { ERC1155Holder, ERC1155Receiver } from '@openzeppelin/contracts/token/ER
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
 // Semi-fungible token (SFT) registry with only one role (UNIQUE_ROLE)
-contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
+contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     bytes32 public constant UNIQUE_ROLE = keccak256('UNIQUE_ROLE');
 
     // grantor => tokenAddress => operator => isApproved
@@ -216,7 +216,7 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
-        return interfaceId == type(IERCXXXX).interfaceId || interfaceId == type(IERC1155Receiver).interfaceId;
+        return interfaceId == type(ISftRolesRegistry).interfaceId || interfaceId == type(IERC1155Receiver).interfaceId;
     }
 
     /** Helper Functions **/
