@@ -4,7 +4,7 @@ import { beforeEach } from 'mocha'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, ONE_DAY, buildRevokeRoleData } from './helpers'
+import { buildRoleAssignment, ONE_DAY, buildRevokeRoleData, generateRoleId } from './helpers'
 import { RoleAssignment, RevokeRoleData } from './types'
 import { generateRandomInt } from '../helpers'
 
@@ -102,6 +102,19 @@ describe('SftRolesRegistrySingleRole', async () => {
         'SftRolesRegistry: nonce must be greater than zero',
       )
       expect(await MockToken.balanceOf(grantor.address, roleAssignment.tokenId)).to.be.equal(roleAssignment.tokenAmount)
+    })
+
+    it('should revert if role is not UNIQUE_ROLE', async () => {
+      const roleAssignment = await buildRoleAssignment({
+        role: 'NOT_UNIQUE_ROLE',
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+      })
+      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
+        'SftRolesRegistry: invalid role',
+      )
     })
 
     describe('when nonce does not exist', async () => {
@@ -291,6 +304,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     beforeEach(async () => {
       RoleAssignment = await buildRoleAssignment({
+        role: 'UNIQUE_ROLE',
         tokenAddress: MockToken.address,
         grantor: grantor.address,
         grantee: grantee.address,
@@ -303,8 +317,10 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revert if grantee is invalid', async () => {
       const newRoleAssignment = await buildRoleAssignment({
+        role: 'UNIQUE_ROLE',
         tokenAddress: MockToken.address,
         grantor: grantor.address,
+        grantee: grantee.address,
         revocable: false,
       })
 
@@ -313,12 +329,8 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment))
 
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          newRevokeRoleData.nonce,
-          newRevokeRoleData.role,
-          newRevokeRoleData.grantee,
-        ),
-      ).to.be.revertedWith('SftRolesRegistry: nonce not used')
+        SftRolesRegistry.connect(grantor).revokeRoleFrom(newRevokeRoleData.nonce, newRevokeRoleData.role, AddressZero),
+      ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
     })
 
     it('should revert if nonce is not expired and is not revocable', async () => {
@@ -371,6 +383,25 @@ describe('SftRolesRegistrySingleRole', async () => {
           RevokeRoleData.revoker,
           RevokeRoleData.grantee,
         )
+    })
+
+    it('should revert if role is not UNIQUE_ROLE', async () => {
+      const newRoleAssignment = await buildRoleAssignment({
+        nonce: generateRandomInt(),
+        tokenAddress: MockToken.address,
+        grantor: grantor.address,
+        grantee: grantee.address,
+        revocable: false,
+        role: 'NOT_UNIQUE_ROLE',
+      })
+
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+          newRoleAssignment.nonce,
+          newRoleAssignment.role,
+          newRoleAssignment.grantee,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: invalid role')
     })
 
     it('should revoke role if sender is approved by grantor', async () => {
@@ -472,6 +503,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     beforeEach(async () => {
       RoleAssignment = await buildRoleAssignment({
+        role: 'UNIQUE_ROLE',
         tokenAddress: MockToken.address,
         grantor: grantor.address,
         grantee: grantee.address,
@@ -548,6 +580,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     beforeEach(async () => {
       RoleAssignment = await buildRoleAssignment({
+        role: 'UNIQUE_ROLE',
         tokenAddress: MockToken.address,
         grantor: grantor.address,
         grantee: grantee.address,
@@ -557,22 +590,50 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
     })
 
-    it('should return the role data', async () => {
-      const roleData = await SftRolesRegistry.roleData(
-        RoleAssignment.nonce,
-        RoleAssignment.role,
-        RoleAssignment.grantee,
-      )
+    describe('RoleData', async () => {
+      it('should return the role data', async () => {
+        const roleData = await SftRolesRegistry.roleData(
+          RoleAssignment.nonce,
+          RoleAssignment.role,
+          RoleAssignment.grantee,
+        )
 
-      expect(roleData.expirationDate).to.be.equal(RoleAssignment.expirationDate)
-      expect(roleData.revocable).to.be.equal(RoleAssignment.revocable)
-      expect(roleData.data).to.be.equal(RoleAssignment.data)
+        expect(roleData.expirationDate).to.be.equal(RoleAssignment.expirationDate)
+        expect(roleData.revocable).to.be.equal(RoleAssignment.revocable)
+        expect(roleData.data).to.be.equal(RoleAssignment.data)
+      })
+      it('should revert if role is not UNIQUE_ROLE', async () => {
+        await expect(
+          SftRolesRegistry.roleData(RoleAssignment.nonce, generateRoleId('NOT_UNIQUE_ROLE'), RoleAssignment.grantee),
+        ).to.be.revertedWith('SftRolesRegistry: invalid role')
+      })
+      it('should revert if grantee is invalid', async () => {
+        await expect(
+          SftRolesRegistry.roleData(RoleAssignment.nonce, RoleAssignment.role, AddressZero),
+        ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
+      })
     })
 
-    it('should return the expiration date', async () => {
-      expect(
-        await SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce, RoleAssignment.role, RoleAssignment.grantee),
-      ).to.be.equal(RoleAssignment.expirationDate)
+    describe('RoleExpirationDate', async () => {
+      it('should return the expiration date', async () => {
+        expect(
+          await SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce, RoleAssignment.role, RoleAssignment.grantee),
+        ).to.be.equal(RoleAssignment.expirationDate)
+      })
+      it('should revert if role is not UNIQUE_ROLE', async () => {
+        await expect(
+          SftRolesRegistry.roleExpirationDate(
+            RoleAssignment.nonce,
+            generateRoleId('NOT_UNIQUE_ROLE'),
+            RoleAssignment.grantee,
+          ),
+        ).to.be.revertedWith('SftRolesRegistry: invalid role')
+      })
+      it('should revert if grantee is invalid', async () => {
+        await expect(
+          SftRolesRegistry.roleExpirationDate(RoleAssignment.nonce, RoleAssignment.role, AddressZero),
+        ).to.be.revertedWith('SftRolesRegistry: invalid grantee or nonce not used')
+      })
     })
   })
 

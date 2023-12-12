@@ -25,11 +25,13 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     modifier validGrantRoleData(
         uint256 _nonce,
         uint64 _expirationDate,
-        uint256 _tokenAmount
+        uint256 _tokenAmount,
+        bytes32 _role
     ) {
         require(_nonce > 0, 'SftRolesRegistry: nonce must be greater than zero');
         require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
         require(_tokenAmount > 0, 'SftRolesRegistry: tokenAmount must be greater than zero');
+        require(_role == UNIQUE_ROLE, 'SftRolesRegistry: invalid role');
         _;
     }
 
@@ -48,7 +50,7 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     )
         external
         override
-        validGrantRoleData(_grantRoleData.nonce, _grantRoleData.expirationDate, _grantRoleData.tokenAmount)
+        validGrantRoleData(_grantRoleData.nonce, _grantRoleData.expirationDate, _grantRoleData.tokenAmount, _grantRoleData.role)
         onlyOwnerOrApproved(_grantRoleData.grantor, _grantRoleData.tokenAddress)
     {
         if (deposits[_grantRoleData.nonce].grantor == address(0)) {
@@ -122,8 +124,10 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     }
 
     function revokeRoleFrom(uint256 _nonce, bytes32 _role, address _grantee) external override {
+        require(_role == UNIQUE_ROLE, 'SftRolesRegistry: invalid role');
+
         RoleData memory _roleData = roleAssignments[_nonce];
-        require(_roleData.grantee != address(0), 'SftRolesRegistry: nonce not used');
+        require(_grantee == roleAssignments[_nonce].grantee, 'SftRolesRegistry: invalid grantee or nonce not used');
         DepositInfo memory _depositInfo = deposits[_nonce];
 
         address caller = _findCaller(_roleData, _depositInfo);
@@ -184,6 +188,8 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
     /** View Functions **/
 
     function roleData(uint256 _nonce, bytes32 _role, address _grantee) external view returns (RoleData memory) {
+        require(_role == UNIQUE_ROLE, 'SftRolesRegistry: invalid role');
+        require(_grantee == roleAssignments[_nonce].grantee, 'SftRolesRegistry: invalid grantee or nonce not used');
         return roleAssignments[_nonce];
     }
 
@@ -192,6 +198,8 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
         bytes32 _role,
         address _grantee
     ) external view returns (uint64 expirationDate_) {
+        require(_role == UNIQUE_ROLE, 'SftRolesRegistry: invalid role');
+        require(_grantee == roleAssignments[_nonce].grantee, 'SftRolesRegistry: invalid grantee or nonce not used');
         return roleAssignments[_nonce].expirationDate;
     }
 
