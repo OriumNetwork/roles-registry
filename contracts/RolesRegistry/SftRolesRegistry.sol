@@ -104,7 +104,7 @@ contract SftRolesRegistrySingleRole is IERCXXXX, ERC1155Holder {
         );
     }
 
-    function _deposit(RoleAssignment memory _grantRoleData) internal {
+    function _deposit(RoleAssignment calldata _grantRoleData) internal {
         deposits[_grantRoleData.nonce] = DepositInfo(
             _grantRoleData.grantor,
             _grantRoleData.tokenAddress,
