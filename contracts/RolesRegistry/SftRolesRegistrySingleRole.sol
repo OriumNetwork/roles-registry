@@ -111,12 +111,12 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         );
 
         emit RoleGranted(
+            _grantRoleData.grantor,
             _grantRoleData.nonce,
             UNIQUE_ROLE,
             _grantRoleData.tokenAddress,
             _grantRoleData.tokenId,
             _grantRoleData.tokenAmount,
-            _grantRoleData.grantor,
             _grantRoleData.grantee,
             _grantRoleData.expirationDate,
             _grantRoleData.revocable,
@@ -125,6 +125,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     function revokeRoleFrom(
+        address _grantor,
         uint256 _nonce,
         bytes32 _role,
         address _grantee
@@ -141,18 +142,18 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         delete roleAssignments[_nonce];
 
         emit RoleRevoked(
+            _depositInfo.grantor,
             _nonce,
             UNIQUE_ROLE,
             _depositInfo.tokenAddress,
             _depositInfo.tokenId,
             _depositInfo.tokenAmount,
-            _depositInfo.grantor,
             _roleData.grantee
         );
     }
 
-    function withdraw(
-        uint256 _nonce
+    function withdrawFrom(
+        address _grantor, uint256 _nonce
     ) public onlyOwnerOrApproved(deposits[_nonce].grantor, deposits[_nonce].tokenAddress) {
         DepositInfo memory _depositInfo = deposits[_nonce];
         require(
@@ -173,13 +174,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
             _depositInfo.tokenAmount
         );
 
-        emit Withdrew(
-            _nonce,
-            _depositInfo.grantor,
-            _depositInfo.tokenAddress,
-            _depositInfo.tokenId,
-            _depositInfo.tokenAmount
-        );
+        emit Withdrew(_depositInfo.grantor, _nonce);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
@@ -190,6 +185,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     /** View Functions **/
 
     function roleData(
+        address _grantor,
         uint256 _nonce,
         bytes32 _role,
         address _grantee
@@ -198,6 +194,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     function roleExpirationDate(
+        address _grantor,
         uint256 _nonce,
         bytes32 _role,
         address _grantee

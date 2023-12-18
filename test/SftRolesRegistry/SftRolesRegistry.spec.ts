@@ -539,7 +539,7 @@ describe('SftRolesRegistry', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom({
           ...RevokeRoleData,
-          revoker: anotherUser.address,
+          grantor: anotherUser.address,
         }),
       ).to.be.revertedWith('SftRolesRegistry: could not find role assignment')
     })
@@ -579,7 +579,7 @@ describe('SftRolesRegistry', async () => {
           newRevokeRoleData.tokenAddress,
           newRevokeRoleData.tokenId,
           newRoleAssignment.tokenAmount,
-          newRevokeRoleData.revoker,
+          newRevokeRoleData.grantor,
           newRoleAssignment.grantee,
         )
     })
@@ -599,7 +599,7 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.tokenAddress,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.grantee,
         )
         // transfer tokens back to owner
@@ -607,7 +607,7 @@ describe('SftRolesRegistry', async () => {
         .withArgs(
           SftRolesRegistry.address,
           SftRolesRegistry.address,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
@@ -627,7 +627,7 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.tokenAddress,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.grantee,
         )
         // transfer tokens back to owner
@@ -635,7 +635,7 @@ describe('SftRolesRegistry', async () => {
         .withArgs(
           SftRolesRegistry.address,
           SftRolesRegistry.address,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
@@ -654,7 +654,7 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.tokenAddress,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.grantee,
         )
         // transfer tokens back to owner
@@ -662,7 +662,7 @@ describe('SftRolesRegistry', async () => {
         .withArgs(
           SftRolesRegistry.address,
           SftRolesRegistry.address,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )
@@ -677,7 +677,7 @@ describe('SftRolesRegistry', async () => {
           RevokeRoleData.tokenAddress,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RoleAssignment.grantee,
         )
         // transfer tokens back to owner
@@ -685,7 +685,7 @@ describe('SftRolesRegistry', async () => {
         .withArgs(
           SftRolesRegistry.address,
           SftRolesRegistry.address,
-          RevokeRoleData.revoker,
+          RevokeRoleData.grantor,
           RevokeRoleData.tokenId,
           RoleAssignment.tokenAmount,
         )

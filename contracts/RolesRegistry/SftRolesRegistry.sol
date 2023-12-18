@@ -186,13 +186,13 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
             tokensToReturn,
-            _revokeRoleData.revoker,
+            _revokeRoleData.grantor,
             _grantee
         );
 
         _transferFrom(
             address(this),
-            _revokeRoleData.revoker,
+            _revokeRoleData.grantor,
             _revokeRoleData.tokenAddress,
             _revokeRoleData.tokenId,
             tokensToReturn
@@ -271,7 +271,7 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
                 _revokeRoleData.role,
                 _revokeRoleData.tokenAddress,
                 _revokeRoleData.tokenId,
-                _revokeRoleData.revoker
+                _revokeRoleData.grantor
             );
     }
 
@@ -287,10 +287,10 @@ contract SftRolesRegistry is IERCXXXX, ERC1155Holder {
 
     function _findCaller(RevokeRoleData calldata _revokeRoleData, address _grantee) internal view returns (address) {
         if (
-            _revokeRoleData.revoker == msg.sender ||
-            isRoleApprovedForAll(_revokeRoleData.tokenAddress, _revokeRoleData.revoker, msg.sender)
+            _revokeRoleData.grantor == msg.sender ||
+            isRoleApprovedForAll(_revokeRoleData.tokenAddress, _revokeRoleData.grantor, msg.sender)
         ) {
-            return _revokeRoleData.revoker;
+            return _revokeRoleData.grantor;
         }
 
         if (_grantee == msg.sender || isRoleApprovedForAll(_revokeRoleData.tokenAddress, _grantee, msg.sender)) {

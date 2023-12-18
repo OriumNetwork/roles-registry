@@ -53,7 +53,7 @@ export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleD
     role: roleAssignment.role,
     tokenAddress: roleAssignment.tokenAddress,
     tokenId: roleAssignment.tokenId,
-    revoker: roleAssignment.grantor,
+    grantor: roleAssignment.grantor,
     grantee: roleAssignment.grantee,
   }
 }
