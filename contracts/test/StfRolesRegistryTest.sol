@@ -60,7 +60,7 @@ contract SftRolesRegistryTest is SetupTest {
             role: role,
             tokenAddress: address(mockERC1155),
             tokenId: tokenId,
-            revoker: msg.sender
+            grantor: msg.sender
         });
 
         vm.startPrank(grantee);

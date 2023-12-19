@@ -16,6 +16,6 @@ export interface RevokeRoleData {
   role: string
   tokenAddress: string
   tokenId: number
-  revoker: string
+  grantor: string
   grantee: string
 }

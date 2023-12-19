@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.9;
 
-import { IERC7432 } from "./interfaces/IERC7432.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import { ERC165Checker } from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import { IERC7432 } from './interfaces/IERC7432.sol';
+import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
 contract RolesRegistry is IERC7432 {
     // grantee => tokenAddress => tokenId => role => struct(expirationDate, data)

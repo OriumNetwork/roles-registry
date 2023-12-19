@@ -42,7 +42,7 @@ interface IERCXXXX is IERC165 {
         bytes32 role;
         address tokenAddress;
         uint256 tokenId;
-        address revoker;
+        address grantor;
     }
 
     /** Events **/
@@ -77,7 +77,7 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount.
-    /// @param _revoker The user revoking the role.
+    /// @param _grantor The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
     event RoleRevoked(
         uint256 indexed _nonce,
@@ -85,7 +85,7 @@ interface IERCXXXX is IERC165 {
         address _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount,
-        address _revoker,
+        address _grantor,
         address _grantee
     );
 
@@ -101,7 +101,13 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount withdrawn.
-    event Withdrew(uint256 indexed _nonce, address indexed _grantor, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount);
+    event Withdrew(
+        uint256 indexed _nonce,
+        address indexed _grantor,
+        address _tokenAddress,
+        uint256 _tokenId,
+        uint256 _tokenAmount
+    );
 
     /** External Functions **/
 
