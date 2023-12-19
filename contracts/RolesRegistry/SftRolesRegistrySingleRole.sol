@@ -52,7 +52,10 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         uint256 _nonce
     ) {
         require(_role == UNIQUE_ROLE, 'SftRolesRegistry: role not supported');
-        require(_grantee == roleAssignments[_grantor][_nonce][_role].grantee, 'SftRolesRegistry: grantee mismatch');
+        require(
+            _grantee != address(0) && _grantee == roleAssignments[_grantor][_nonce][_role].grantee,
+            'SftRolesRegistry: grantee mismatch'
+        );
         _;
     }
 
@@ -106,11 +109,12 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         uint256 _nonce,
         bytes32 _role,
         address _grantee
-    ) external override validRoleAndGrantee(_grantor, _role, _grantee, _nonce) {
+    ) external override {
         RoleData memory _roleData = roleAssignments[_grantor][_nonce][_role];
         require(_roleData.expirationDate != 0, 'SftRolesRegistry: role does not exist');
+        require(_grantee == _roleData.grantee, 'SftRolesRegistry: grantee mismatch');
 
-        DepositInfo memory _depositInfo = deposits[_grantor][_nonce];
+        DepositInfo storage _depositInfo = deposits[_grantor][_nonce];
         address caller = _findCaller(_grantor, _roleData.grantee, _depositInfo.tokenAddress);
         if (_roleData.expirationDate > block.timestamp && !_roleData.revocable) {
             // if role is not expired and is not revocable, only the grantee can revoke it
