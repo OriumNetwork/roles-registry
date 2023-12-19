@@ -101,7 +101,13 @@ interface IERCXXXX is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount withdrawn.
-    event Withdrew(uint256 indexed _nonce, address indexed _grantor, address _tokenAddress, uint256 _tokenId, uint256 _tokenAmount);
+    event Withdrew(
+        uint256 indexed _nonce,
+        address indexed _grantor,
+        address _tokenAddress,
+        uint256 _tokenId,
+        uint256 _tokenAmount
+    );
 
     /** External Functions **/
 

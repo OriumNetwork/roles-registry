@@ -90,7 +90,9 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
                 'SftRolesRegistry: tokenAmount mismatch'
             );
 
-            RoleData storage _roleData = roleAssignments[_grantRoleData.grantor][_grantRoleData.nonce][_grantRoleData.role];
+            RoleData storage _roleData = roleAssignments[_grantRoleData.grantor][_grantRoleData.nonce][
+                _grantRoleData.role
+            ];
             require(
                 _roleData.expirationDate < block.timestamp || _roleData.revocable,
                 'SftRolesRegistry: nonce is not expired or is not revocable'
@@ -129,12 +131,13 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     function withdrawFrom(
-        address _grantor, uint256 _nonce
+        address _grantor,
+        uint256 _nonce
     ) public onlyOwnerOrApproved(_grantor, deposits[_grantor][_nonce].tokenAddress) {
-        require(deposits[_grantor][_nonce].tokenAmount != 0, "SftRolesRegistry: nonce does not exist");
+        require(deposits[_grantor][_nonce].tokenAmount != 0, 'SftRolesRegistry: nonce does not exist');
         require(
             roleAssignments[_grantor][_nonce][UNIQUE_ROLE].expirationDate < block.timestamp ||
-            roleAssignments[_grantor][_nonce][UNIQUE_ROLE].revocable,
+                roleAssignments[_grantor][_nonce][UNIQUE_ROLE].revocable,
             'SftRolesRegistry: token has an active role'
         );
 
@@ -250,5 +253,4 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         }
         revert('SftRolesRegistry: sender must be approved');
     }
-
 }

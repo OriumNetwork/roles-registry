@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
 /// @title ERC-XXXX Semi-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
