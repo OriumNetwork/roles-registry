@@ -6,7 +6,7 @@ import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol
 
 /// @title ERC-XXXX Semi-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
-/// Note: the ERC-165 identifier for this interface is 0x91bb3904
+/// Note: the ERC-165 identifier for this interface is 0xd38a803e
 interface ISftRolesRegistry is IERC165 {
     struct RoleData {
         address grantee;
