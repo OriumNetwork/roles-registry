@@ -16,7 +16,6 @@ interface ISftRolesRegistry is IERC165 {
     }
 
     struct DepositInfo {
-        address grantor; // todo do we need this?
         address tokenAddress;
         uint256 tokenId;
         uint256 tokenAmount;

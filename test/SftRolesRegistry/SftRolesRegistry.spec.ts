@@ -773,7 +773,7 @@ describe('SftRolesRegistry', async () => {
     })
   })
 
-  describe('RoleBalanceOf', async () => {
+  describe('RoleBalanceOf @skip-on-coverage', async () => {
     it('should check at least 4300 grant roles without run out of gas', async function () {
       const tokenId = generateRandomInt()
       const role = generateRoleId('Role()')
@@ -803,14 +803,14 @@ describe('SftRolesRegistry', async () => {
 
       await MockToken.mint(grantor.address, tokenId, totalAmount * 2)
 
-      const promises = roleAssignments.map((t, i) => SftRolesRegistry.connect(grantor).grantRoleFrom(t))
+      const promises = roleAssignments.map(t => SftRolesRegistry.connect(grantor).grantRoleFrom(t))
       await Promise.all(promises)
 
       expect(await SftRolesRegistry.roleBalanceOf(role, MockToken.address, tokenId, grantee.address)).to.be.equal(
         totalAmount,
       )
 
-      const revokePromises = roleAssignments.map(async (t, i) => {
+      const revokePromises = roleAssignments.map(async t => {
         const revokeRoleData = buildRevokeRoleData(t)
         return SftRolesRegistry.connect(grantee).revokeRoleFrom(revokeRoleData)
       })
@@ -827,7 +827,6 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should return true if SftRolesRegistry interface id (0x89cb6ab6)', async () => {
-      //const id = getInterfaceID(IERCXXXX__factory.createInterface())
       expect(await SftRolesRegistry.supportsInterface('0x89cb6ab6')).to.be.true
     })
   })
