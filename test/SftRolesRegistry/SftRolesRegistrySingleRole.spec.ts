@@ -4,13 +4,11 @@ import { beforeEach } from 'mocha'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { buildRoleAssignment, ONE_DAY, buildRevokeRoleData, generateRoleId } from './helpers'
-import { RoleAssignment, RevokeRoleData } from './types'
+import { generateRoleId, buildRecord, buildGrantRole } from './helpers'
+import { GrantRoleData, Record } from './types'
 import { generateRandomInt } from '../helpers'
 
-const { AddressZero } = ethers.constants
-
-describe('SftRolesRegistrySingleRole', async () => {
+describe.only('SftRolesRegistrySingleRole', async () => {
   let SftRolesRegistry: Contract
   let MockToken: Contract
   let grantor: SignerWithAddress
@@ -33,608 +31,568 @@ describe('SftRolesRegistrySingleRole', async () => {
     await loadFixture(deployContracts)
   })
 
-  describe('grantRole', async () => {
-    it('should revert without a reason if tokenAddress is not an ERC-1155 contract', async () => {
-      const roleAssignment = await buildRoleAssignment()
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.reverted
-    })
-
-    it('should revert if expirationDate is in the past', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        expirationDate: (await time.latest()) - ONE_DAY,
-      })
-      await expect(SftRolesRegistry.grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: expiration date must be in the future',
-      )
-    })
-
+  describe('createRecordFrom', async () => {
     it('should revert when sender is not grantor or approved', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        tokenAddress: MockToken.address,
-        grantee: grantee.address,
-      })
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: account not approved',
-      )
-    })
-
-    it('should revert if contract cannot transfer tokens', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        tokenAddress: MockToken.address,
+      const record = buildRecord({
         grantor: grantor.address,
-        grantee: grantee.address,
+        tokenAddress: MockToken.address,
       })
-      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'ERC1155: caller is not token owner or approved',
-      )
+      await expect(
+        SftRolesRegistry.connect(anotherUser).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: account not approved')
     })
 
-    it('should revert if tokenAmount is zero', async () => {
-      const roleAssignment = await buildRoleAssignment({
+    it('should revert when tokenAmount is zero', async () => {
+      const record = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
         tokenAmount: 0,
       })
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: tokenAmount must be greater than zero',
-      )
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: tokenAmount must be greater than zero')
+    })
+
+    it('should revert without a reason if tokenAddress is not an ERC-1155 contract', async () => {
+      const record = buildRecord({
+        grantor: grantor.address,
+        tokenAmount: generateRandomInt(),
+      })
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      ).to.be.reverted
+    })
+
+    it('should revert if contract is not approved to transfer tokens', async () => {
+      const record = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+        tokenAmount: generateRandomInt(),
+      })
+      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount)
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      ).to.be.revertedWith('ERC1155: caller is not token owner or approved')
     })
 
     it('should revert when grantor does not have enough tokens', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        tokenAddress: MockToken.address,
+      const record = buildRecord({
         grantor: grantor.address,
-        grantee: grantee.address,
-        tokenAmount: 100,
+        tokenAddress: MockToken.address,
+        tokenAmount: generateRandomInt() + 1,
       })
-      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount - 10)
+      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount - 1)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'ERC1155: insufficient balance for transfer',
-      )
-    })
-
-    it('should revert if nonce is zero', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        nonce: 0,
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-      })
-      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: nonce must be greater than zero',
-      )
-      expect(await MockToken.balanceOf(grantor.address, roleAssignment.tokenId)).to.be.equal(roleAssignment.tokenAmount)
-    })
-
-    it('should revert if role is not UNIQUE_ROLE', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        role: 'NOT_UNIQUE_ROLE',
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-      })
-      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: role not supported',
-      )
-    })
-
-    it('should revert if grantee is zero address', async () => {
-      const roleAssignment = await buildRoleAssignment({
-        grantee: AddressZero,
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-      })
-      await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: grantee must not be zero address',
-      )
-    })
-
-    describe('when nonce does not exist', async () => {
-      it('should grant role when grantor is sender and has enough tokens', async () => {
-        const roleAssignment = await buildRoleAssignment({
-          tokenAddress: MockToken.address,
-          grantor: grantor.address,
-          grantee: grantee.address,
-        })
-        await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-        await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-        await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(roleAssignment))
-          .to.emit(SftRolesRegistry, 'RoleGranted')
-          .withArgs(
-            roleAssignment.grantor,
-            roleAssignment.nonce,
-            roleAssignment.role,
-            roleAssignment.tokenAddress,
-            roleAssignment.tokenId,
-            roleAssignment.tokenAmount,
-            roleAssignment.grantee,
-            roleAssignment.expirationDate,
-            roleAssignment.revocable,
-            roleAssignment.data,
-          )
-      })
-
-      it('should grant role when sender is approved and grantor has enough tokens', async () => {
-        const roleAssignment = await buildRoleAssignment({
-          tokenAddress: MockToken.address,
-          grantor: grantor.address,
-          grantee: grantee.address,
-        })
-        await MockToken.mint(grantor.address, roleAssignment.tokenId, roleAssignment.tokenAmount)
-        await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-        await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
-          roleAssignment.tokenAddress,
-          anotherUser.address,
-          true,
-        )
-        await expect(SftRolesRegistry.connect(anotherUser).grantRoleFrom(roleAssignment))
-          .to.emit(SftRolesRegistry, 'RoleGranted')
-          .withArgs(
-            roleAssignment.grantor,
-            roleAssignment.nonce,
-            roleAssignment.role,
-            roleAssignment.tokenAddress,
-            roleAssignment.tokenId,
-            roleAssignment.tokenAmount,
-            roleAssignment.grantee,
-            roleAssignment.expirationDate,
-            roleAssignment.revocable,
-            roleAssignment.data,
-          )
-      })
-    })
-  })
-
-  describe('when nonce exists', async () => {
-    let RoleAssignment: RoleAssignment
-
-    beforeEach(async () => {
-      RoleAssignment = await buildRoleAssignment({
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-      })
-      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment))
-        .to.emit(SftRolesRegistry, 'RoleGranted')
-        .withArgs(
-          RoleAssignment.grantor,
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          RoleAssignment.tokenAmount,
-          RoleAssignment.grantee,
-          RoleAssignment.expirationDate,
-          RoleAssignment.revocable,
-          RoleAssignment.data,
-        )
-    })
-
-    it('should revert if nonce is not expired', async () => {
-      const revocableRoleAssignment = await buildRoleAssignment({
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-        revocable: false,
-      })
-
-      await MockToken.mint(grantor.address, revocableRoleAssignment.tokenId, revocableRoleAssignment.tokenAmount)
-      await SftRolesRegistry.connect(grantor).grantRoleFrom(revocableRoleAssignment)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(revocableRoleAssignment)).to.be.revertedWith(
-        'SftRolesRegistry: nonce is not expired or is not revocable',
-      )
-    })
-
-    it("should revert if grantor's balance is insufficient", async () => {
       await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          nonce: generateRandomInt(),
-          tokenAmount: RoleAssignment.tokenAmount * 2,
-        }),
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
       ).to.be.revertedWith('ERC1155: insufficient balance for transfer')
     })
 
-    it('should revert if tokenAddress mismatch', async () => {
+    it('should create record when sender is grantor', async () => {
+      const record = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
       await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          tokenAddress: anotherUser.address,
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: tokenAddress mismatch')
-    })
-    it('should revert if tokenId mismatch', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          tokenId: generateRandomInt(),
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: tokenId mismatch')
-    })
-    it('should revert if tokenAmount mismatch', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRoleFrom({
-          ...RoleAssignment,
-          tokenAmount: generateRandomInt(),
-        }),
-      ).to.be.revertedWith('SftRolesRegistry: tokenAmount mismatch')
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RecordCreated')
+        .withArgs(record.grantor, 1, record.tokenAddress, record.tokenId, record.tokenAmount)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          grantor.address,
+          SftRolesRegistry.address,
+          record.tokenId,
+          record.tokenAmount,
+        )
     })
 
-    it('should grant role if tokens deposited are equal to tokens requested', async () => {
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment))
+    it('should create record when sender is approved', async () => {
+      const record = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(record.tokenAddress, anotherUser.address, true)
+      await expect(
+        SftRolesRegistry.connect(anotherUser).createRecordFrom(
+          record.grantor,
+          record.tokenAddress,
+          record.tokenId,
+          record.tokenAmount,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RecordCreated')
+        .withArgs(record.grantor, 1, record.tokenAddress, record.tokenId, record.tokenAmount)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          grantor.address,
+          SftRolesRegistry.address,
+          record.tokenId,
+          record.tokenAmount,
+        )
+    })
+  })
+
+  describe('grantRole', async () => {
+    let RecordCreated: Record
+    let GrantRoleData: GrantRoleData
+
+    beforeEach(async () => {
+      RecordCreated = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      GrantRoleData = await buildGrantRole({
+        recordId: 1,
+        grantee: grantee.address,
+      })
+      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          RecordCreated.grantor,
+          RecordCreated.tokenAddress,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
+        ),
+      ).to.not.be.reverted
+    })
+
+    it('should revert when sender is not grantor or approved', async () => {
+      await expect(
+        SftRolesRegistry.connect(anotherUser).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: account not approved')
+    })
+
+    it('should revert when role is not supported', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          generateRoleId('ANOTHER_ROLE'),
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: role not supported')
+    })
+
+    it('should revert when expirationDate is zero', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          await time.latest(),
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: expiration date must be in the future')
+    })
+
+    it('should grant role when sender is grantor', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      )
         .to.emit(SftRolesRegistry, 'RoleGranted')
         .withArgs(
-          RoleAssignment.grantor,
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.tokenAddress,
-          RoleAssignment.tokenId,
-          RoleAssignment.tokenAmount,
-          RoleAssignment.grantee,
-          RoleAssignment.expirationDate,
-          RoleAssignment.revocable,
-          RoleAssignment.data,
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
         )
-        // should not transfer any tokens
-        .to.not.emit(MockToken, 'TransferSingle')
+    })
+
+    it('should grant role when sender is approved', async () => {
+      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
+        RecordCreated.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(
+        SftRolesRegistry.connect(anotherUser).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RoleGranted')
+        .withArgs(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        )
     })
   })
 
   describe('revokeRole', async () => {
-    let RoleAssignment: RoleAssignment
-    let RevokeRoleData: RevokeRoleData
+    let RecordCreated: Record
+    let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      RoleAssignment = await buildRoleAssignment({
-        role: 'UNIQUE_ROLE',
-        tokenAddress: MockToken.address,
+      RecordCreated = buildRecord({
         grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      GrantRoleData = await buildGrantRole({
+        recordId: 1,
         grantee: grantee.address,
       })
-      RevokeRoleData = buildRevokeRoleData(RoleAssignment)
+      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
-    })
-
-    it('should revert if nonce does not exist', async () => {
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          RoleAssignment.grantor,
-          generateRandomInt(),
-          RoleAssignment.role,
-          RoleAssignment.grantee,
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          RecordCreated.grantor,
+          RecordCreated.tokenAddress,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
         ),
-      ).to.be.revertedWith('SftRolesRegistry: role does not exist')
-    })
-
-    it('should revert if grantee is invalid', async () => {
-      const newRoleAssignment = await buildRoleAssignment({
-        role: 'UNIQUE_ROLE',
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-        revocable: false,
-      })
-
-      const newRevokeRoleData = buildRevokeRoleData(newRoleAssignment)
-      await MockToken.mint(newRoleAssignment.grantor, newRoleAssignment.tokenId, newRoleAssignment.tokenAmount)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment))
-
+      ).to.not.be.reverted
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          newRevokeRoleData.grantor,
-          newRevokeRoleData.nonce,
-          newRevokeRoleData.role,
-          AddressZero,
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
         ),
-      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+      ).to.not.be.reverted
     })
 
-    it('should revert if nonce is not expired and is not revocable', async () => {
-      const newRoleAssignment = await buildRoleAssignment({
-        nonce: generateRandomInt(),
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-        revocable: false,
-      })
-
-      const newRevokeRoleData = buildRevokeRoleData(newRoleAssignment)
-      await MockToken.mint(newRoleAssignment.grantor, newRoleAssignment.tokenId, newRoleAssignment.tokenAmount)
-      await SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment)
-
-      await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          newRevokeRoleData.grantor,
-          newRevokeRoleData.nonce,
-          newRevokeRoleData.role,
-          newRevokeRoleData.grantee,
-        ),
-      ).to.be.revertedWith('SftRolesRegistry: nonce is not expired or is not revocable')
-    })
-
-    it('should revert if caller is not approved', async () => {
+    it('should revert when sender is not grantor or approved', async () => {
       await expect(
         SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.grantee,
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          grantee.address,
         ),
       ).to.be.revertedWith('SftRolesRegistry: sender must be approved')
     })
 
-    it('should revoke role if sender is grantor', async () => {
+    it('should revert when the grantee is not the same', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.grantee,
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          anotherUser.address,
         ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.tokenAddress,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-          RevokeRoleData.grantee,
-        )
+      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
     })
 
-    it('should revoke role if sender is approved by grantor', async () => {
-      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
-        RoleAssignment.tokenAddress,
-        anotherUser.address,
-        true,
-      )
+    it('should revert when role is not expired and is not revocable', async () => {
+      const newRecordId = 2
+      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.grantee,
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          RecordCreated.grantor,
+          RecordCreated.tokenAddress,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
         ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.tokenAddress,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-          RevokeRoleData.grantee,
-        )
-    })
-    it('should revoke role if sender is approved by grantee', async () => {
-      await SftRolesRegistry.connect(grantee).setRoleApprovalForAll(
-        RoleAssignment.tokenAddress,
-        anotherUser.address,
-        true,
-      )
+      ).to.not.be.reverted
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.grantee,
+        SftRolesRegistry.connect(grantor).grantRole(
+          newRecordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          false,
+          GrantRoleData.data,
         ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(
-          RevokeRoleData.grantor,
-          RevokeRoleData.nonce,
-          RevokeRoleData.role,
-          RevokeRoleData.tokenAddress,
-          RevokeRoleData.tokenId,
-          RoleAssignment.tokenAmount,
-          RevokeRoleData.grantee,
-        )
+      ).to.not.be.reverted
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRoleFrom(newRecordId, GrantRoleData.role, GrantRoleData.grantee),
+      ).to.be.revertedWith('SftRolesRegistry: role is not expired and is not revocable')
     })
 
-    it('should revoke role if sender is grantee', async () => {
-      const newRoleAssignment = await buildRoleAssignment({
-        nonce: generateRandomInt(),
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-        revocable: false,
-      })
-
-      const newRevokeRoleData = buildRevokeRoleData(newRoleAssignment)
-
-      await MockToken.mint(newRoleAssignment.grantor, newRoleAssignment.tokenId, newRoleAssignment.tokenAmount)
-      await SftRolesRegistry.connect(grantor).grantRoleFrom(newRoleAssignment)
+    it('should revoke role when sender is grantee, and role is not expired nor revocable', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          false,
+          GrantRoleData.data,
+        ),
+      ).to.not.be.reverted
 
       await expect(
         SftRolesRegistry.connect(grantee).revokeRoleFrom(
-          RevokeRoleData.grantor,
-          newRevokeRoleData.nonce,
-          newRevokeRoleData.role,
-          RevokeRoleData.grantee,
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
         ),
       )
         .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(
-          newRevokeRoleData.grantor,
-          newRevokeRoleData.nonce,
-          newRevokeRoleData.role,
-          newRevokeRoleData.tokenAddress,
-          newRevokeRoleData.tokenId,
-          newRoleAssignment.tokenAmount,
-          newRevokeRoleData.grantee,
-        )
-    })
-  })
-
-  describe('setRoleApprovalForAll', async () => {
-    it('should approve and revoke approval', async () => {
-      expect(await SftRolesRegistry.isRoleApprovedForAll(AddressZero, grantor.address, anotherUser.address)).to.be.false
-      expect(await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(AddressZero, anotherUser.address, true))
-        .to.emit(SftRolesRegistry, 'RoleApprovalForAll')
-        .withArgs(AddressZero, grantor.address, anotherUser.address, true)
-      expect(await SftRolesRegistry.isRoleApprovedForAll(AddressZero, grantor.address, anotherUser.address)).to.be.true
-    })
-  })
-
-  describe('withdrawFrom', async function () {
-    let RoleAssignment: RoleAssignment
-    let RevokeRoleData: RevokeRoleData
-
-    beforeEach(async () => {
-      RoleAssignment = await buildRoleAssignment({
-        role: 'UNIQUE_ROLE',
-        tokenAddress: MockToken.address,
-        grantor: grantor.address,
-        grantee: grantee.address,
-        revocable: false,
-      })
-      RevokeRoleData = buildRevokeRoleData(RoleAssignment)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
+        .withArgs(GrantRoleData.recordId, GrantRoleData.role, GrantRoleData.grantee)
     })
 
-    it('should revert if caller is not approved', async () => {
+    it('should revoke role when sender is grantor', async () => {
       await expect(
-        SftRolesRegistry.connect(grantee).withdrawFrom(RoleAssignment.grantor, RoleAssignment.nonce),
-      ).to.be.revertedWith('SftRolesRegistry: account not approved')
-    })
-
-    it('should revert when nonce has a role is not expired', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).withdrawFrom(RoleAssignment.grantor, RoleAssignment.nonce),
-      ).to.be.revertedWith('SftRolesRegistry: token has an active role')
-    })
-
-    it('should revert if nonce does not exist', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).withdrawFrom(RevokeRoleData.grantor, generateRandomInt()),
-      ).to.be.revertedWith('SftRolesRegistry: nonce does not exist')
-    })
-
-    it('should not revert if nonce is expired', async () => {
-      await time.increase(ONE_DAY)
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(RevokeRoleData.grantor, RevokeRoleData.nonce))
-        .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(RevokeRoleData.grantor, RevokeRoleData.nonce)
-    })
-
-    it('should not revert if nonce has a role revoked', async () => {
-      await time.increase(ONE_DAY)
-      await SftRolesRegistry.connect(grantor).revokeRoleFrom(
-        RevokeRoleData.grantor,
-        RevokeRoleData.nonce,
-        RevokeRoleData.role,
-        RevokeRoleData.grantee,
+        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
       )
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(RevokeRoleData.grantor, RevokeRoleData.nonce))
-        .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(RoleAssignment.grantor, RoleAssignment.nonce)
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(GrantRoleData.recordId, GrantRoleData.role, GrantRoleData.grantee)
     })
 
-    it('should not revert if nonce has a revocable role', async () => {
-      await time.increase(ONE_DAY)
-      RoleAssignment.revocable = true
-      RoleAssignment.expirationDate = (await time.latest()) + ONE_DAY
-      await SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(RevokeRoleData.grantor, RevokeRoleData.nonce))
-        .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(RevokeRoleData.grantor, RevokeRoleData.nonce)
+    it('should revoke role when sender is grantee', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantee).revokeRoleFrom(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(GrantRoleData.recordId, GrantRoleData.role, GrantRoleData.grantee)
+    })
+
+    it('should revoke role when sender is approved by grantor', async () => {
+      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
+        RecordCreated.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(
+        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(GrantRoleData.recordId, GrantRoleData.role, GrantRoleData.grantee)
+    })
+
+    it('should revoke role when sender is approved by grantee', async () => {
+      await SftRolesRegistry.connect(grantee).setRoleApprovalForAll(
+        RecordCreated.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(
+        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'RoleRevoked')
+        .withArgs(GrantRoleData.recordId, GrantRoleData.role, GrantRoleData.grantee)
     })
   })
 
-  describe('View Functions', async () => {
-    let RoleAssignment: RoleAssignment
+  describe('withdrawFrom', async () => {
+    let RecordCreated: Record
+    let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      RoleAssignment = await buildRoleAssignment({
-        role: 'UNIQUE_ROLE',
-        tokenAddress: MockToken.address,
+      RecordCreated = buildRecord({
         grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      GrantRoleData = await buildGrantRole({
+        recordId: 1,
         grantee: grantee.address,
       })
+      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await MockToken.mint(grantor.address, RoleAssignment.tokenId, RoleAssignment.tokenAmount)
-      await expect(SftRolesRegistry.connect(grantor).grantRoleFrom(RoleAssignment)).to.not.be.reverted
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          RecordCreated.grantor,
+          RecordCreated.tokenAddress,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
+        ),
+      ).to.not.be.reverted
     })
 
-    describe('RoleData', async () => {
-      it('should return the role data', async () => {
-        const roleData = await SftRolesRegistry.roleData(
-          RoleAssignment.grantor,
-          RoleAssignment.nonce,
-          RoleAssignment.role,
-          RoleAssignment.grantee,
+    it('should revert when sender is not grantor or approved', async () => {
+      await expect(SftRolesRegistry.connect(anotherUser).withdrawFrom(GrantRoleData.recordId)).to.be.revertedWith(
+        'SftRolesRegistry: account not approved',
+      )
+    })
+
+    it('should revert when record has an active role', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.not.be.reverted
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId)).to.be.revertedWith(
+        'SftRolesRegistry: token has an active role',
+      )
+    })
+
+    it('should withdraw tokens when sender is grantor', async () => {
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId))
+        .to.emit(SftRolesRegistry, 'Withdrew')
+        .withArgs(GrantRoleData.recordId)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
         )
-
-        expect(roleData.expirationDate).to.be.equal(RoleAssignment.expirationDate)
-        expect(roleData.revocable).to.be.equal(RoleAssignment.revocable)
-        expect(roleData.data).to.be.equal(RoleAssignment.data)
-      })
-
-      it('should revert if role is not UNIQUE_ROLE', async () => {
-        await expect(
-          SftRolesRegistry.roleData(
-            RoleAssignment.grantor,
-            RoleAssignment.nonce,
-            generateRoleId('NOT_UNIQUE_ROLE'),
-            RoleAssignment.grantee,
-          ),
-        ).to.be.revertedWith('SftRolesRegistry: role not supported')
-      })
-
-      it('should revert if grantee is invalid', async () => {
-        await expect(
-          SftRolesRegistry.roleData(RoleAssignment.grantor, RoleAssignment.nonce, RoleAssignment.role, AddressZero),
-        ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
-      })
     })
 
-    describe('RoleExpirationDate', async () => {
-      it('should return the expiration date', async () => {
-        expect(
-          await SftRolesRegistry.roleExpirationDate(
-            RoleAssignment.grantor,
-            RoleAssignment.nonce,
-            RoleAssignment.role,
-            RoleAssignment.grantee,
-          ),
-        ).to.be.equal(RoleAssignment.expirationDate)
-      })
+    it('should withdraw tokens when sender is approved', async () => {
+      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
+        RecordCreated.tokenAddress,
+        anotherUser.address,
+        true,
+      )
+      await expect(SftRolesRegistry.connect(anotherUser).withdrawFrom(GrantRoleData.recordId))
+        .to.emit(SftRolesRegistry, 'Withdrew')
+        .withArgs(GrantRoleData.recordId)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
+        )
+    })
+  })
 
-      it('should revert if role is not UNIQUE_ROLE', async () => {
-        await expect(
-          SftRolesRegistry.roleExpirationDate(
-            RoleAssignment.grantor,
-            RoleAssignment.nonce,
-            generateRoleId('NOT_UNIQUE_ROLE'),
-            RoleAssignment.grantee,
-          ),
-        ).to.be.revertedWith('SftRolesRegistry: role not supported')
-      })
+  describe('view functions', async () => {
+    let RecordCreated: Record
+    let GrantRoleData: GrantRoleData
 
-      it('should revert if grantee is invalid', async () => {
-        await expect(
-          SftRolesRegistry.roleExpirationDate(
-            RoleAssignment.grantor,
-            RoleAssignment.nonce,
-            RoleAssignment.role,
-            AddressZero,
-          ),
-        ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+    beforeEach(async () => {
+      RecordCreated = buildRecord({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
       })
+      GrantRoleData = await buildGrantRole({
+        recordId: 1,
+        grantee: grantee.address,
+      })
+      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await expect(
+        SftRolesRegistry.connect(grantor).createRecordFrom(
+          RecordCreated.grantor,
+          RecordCreated.tokenAddress,
+          RecordCreated.tokenId,
+          RecordCreated.tokenAmount,
+        ),
+      ).to.not.be.reverted
+      await expect(
+        SftRolesRegistry.connect(grantor).grantRole(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.not.be.reverted
+    })
+
+    it('should revert when grantee is not the same', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).roleData(GrantRoleData.recordId, GrantRoleData.role, anotherUser.address),
+      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+      await expect(
+        SftRolesRegistry.connect(grantor).roleExpirationDate(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          anotherUser.address,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+    })
+
+    it('should return role data', async () => {
+      expect(
+        await SftRolesRegistry.connect(grantor).roleExpirationDate(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(GrantRoleData.expirationDate)
+
+      const roleDate = await SftRolesRegistry.connect(grantor).roleData(
+        GrantRoleData.recordId,
+        GrantRoleData.role,
+        GrantRoleData.grantee,
+      )
+      expect(roleDate.grantee).to.be.equal(GrantRoleData.grantee)
+      expect(roleDate.expirationDate).to.be.equal(GrantRoleData.expirationDate)
+      expect(roleDate.revocable).to.be.equal(GrantRoleData.revocable)
+      expect(roleDate.data).to.be.equal(GrantRoleData.data)
     })
   })
 
@@ -644,7 +602,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should return true if IERCXXXX interface id', async () => {
-      expect(await SftRolesRegistry.supportsInterface('0xd38a803e')).to.be.true
+      expect(await SftRolesRegistry.supportsInterface('0xa4629326')).to.be.true
     })
   })
 })
