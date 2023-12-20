@@ -69,18 +69,17 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         _grantOrUpdateRole(_recordId, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
-    function revokeRoleFrom(uint256 _recordId, bytes32 _role, address _grantee) external override {
-        RoleAssignment storage role = roleAssignments[_recordId][_role];
-        require(_grantee == role.grantee, 'SftRolesRegistry: grantee mismatch');
-
+    function revokeRoleFrom(
+        uint256 _recordId, bytes32 _role, address _grantee
+    ) external override sameGrantee(_recordId, _role, _grantee) {
+        RoleAssignment storage roleAssignment = roleAssignments[_recordId][_role];
         Record storage record = records[_recordId];
-        address caller = _findCaller(record.grantor, role.grantee, record.tokenAddress);
-        if (role.expirationDate > block.timestamp && !role.revocable) {
+        address caller = _findCaller(record.grantor, roleAssignment.grantee, record.tokenAddress);
+        if (roleAssignment.expirationDate > block.timestamp && !roleAssignment.revocable) {
             // if role is not expired and is not revocable, only the grantee can revoke it
-            require(caller == role.grantee, 'SftRolesRegistry: role is not expired and is not revocable');
+            require(caller == roleAssignment.grantee, 'SftRolesRegistry: role is not expired and is not revocable');
         }
-
-        emit RoleRevoked(_recordId, _role, role.grantee);
+        emit RoleRevoked(_recordId, _role, roleAssignment.grantee);
         delete roleAssignments[_recordId][_role];
     }
 
