@@ -8,7 +8,7 @@ import { generateRoleId, buildRecord, buildGrantRole } from './helpers'
 import { GrantRoleData, Record } from './types'
 import { generateRandomInt } from '../helpers'
 
-describe.only('SftRolesRegistrySingleRole', async () => {
+describe('SftRolesRegistrySingleRole', async () => {
   let SftRolesRegistry: Contract
   let MockToken: Contract
   let grantor: SignerWithAddress
