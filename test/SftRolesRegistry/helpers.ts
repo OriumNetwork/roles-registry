@@ -1,12 +1,42 @@
 import { solidityKeccak256 } from 'ethers/lib/utils'
-import { RevokeRoleData, RoleAssignment } from './types'
+import { GrantRoleData, Record, RevokeRoleData, RoleAssignment } from './types'
 import { generateRandomInt } from '../helpers'
 import { ethers } from 'hardhat'
-import { utils } from 'ethers'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const { HashZero, AddressZero } = ethers.constants
 export const ONE_DAY = 60 * 60 * 24
+
+export function buildRecord({
+  grantor = AddressZero,
+  tokenAddress = AddressZero,
+  tokenId = generateRandomInt(),
+  tokenAmount = generateRandomInt(),
+}): Record {
+  return { grantor, tokenAddress, tokenId, tokenAmount }
+}
+
+export async function buildGrantRole({
+  recordId = generateRandomInt(),
+  role = 'UNIQUE_ROLE',
+  grantee = AddressZero,
+  expirationDate = null,
+  revocable = true,
+  data = HashZero,
+}): Promise<GrantRoleData> {
+  return {
+    recordId,
+    role: generateRoleId(role),
+    grantee,
+    expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,
+    revocable,
+    data,
+  }
+}
+
+export function generateRoleId(role: string) {
+  return solidityKeccak256(['string'], [role])
+}
 
 export async function buildRoleAssignment({
   // default values
@@ -46,7 +76,6 @@ export async function buildRoleAssignment({
     data,
   }
 }
-
 export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleData {
   return {
     nonce: roleAssignment.nonce,
@@ -56,17 +85,4 @@ export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleD
     grantor: roleAssignment.grantor,
     grantee: roleAssignment.grantee,
   }
-}
-
-export function generateRoleId(role: string) {
-  return solidityKeccak256(['string'], [role])
-}
-
-export function getInterfaceID(contractInterface: utils.Interface) {
-  let interfaceID = ethers.constants.Zero
-  const functions: string[] = Object.keys(contractInterface.functions)
-  for (let i = 0; i < functions.length; i++) {
-    interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
-  }
-  return interfaceID
 }
