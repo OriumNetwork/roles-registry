@@ -116,8 +116,8 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         uint256 _recordId,
         bytes32 _role,
         address _grantee
-    ) external view sameGrantee(_recordId, _role, _grantee) returns (RoleAssignment memory) {
-        return roleAssignments[_recordId][_role];
+    ) external view sameGrantee(_recordId, _role, _grantee) returns (bytes memory data_) {
+        return roleAssignments[_recordId][_role].data;
     }
 
     function roleExpirationDate(
@@ -126,6 +126,14 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         address _grantee
     ) external view sameGrantee(_recordId, _role, _grantee) returns (uint64 expirationDate_) {
         return roleAssignments[_recordId][_role].expirationDate;
+    }
+
+    function isRoleRevocable(
+        uint256 _recordId,
+        bytes32 _role,
+        address _grantee
+    ) external view sameGrantee(_recordId, _role, _grantee) returns (bool revocable_) {
+        return roleAssignments[_recordId][_role].revocable;
     }
 
     function isRoleApprovedForAll(

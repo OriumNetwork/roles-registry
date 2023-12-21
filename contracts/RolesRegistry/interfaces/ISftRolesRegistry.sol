@@ -6,7 +6,7 @@ import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol
 
 /// @title ERC-XXXX Semi-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
-/// Note: the ERC-165 identifier for this interface is 0xa4629326
+/// Note: the ERC-165 identifier for this interface is 0x42ba720c
 interface ISftRolesRegistry is IERC165 {
     struct RoleAssignment {
         address grantee;
@@ -123,29 +123,39 @@ interface ISftRolesRegistry is IERC165 {
     /// @param _recordId The record identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that received the role.
-    function roleData(
-        uint256 _recordId,
-        bytes32 _role,
-        address _grantee
-    ) external view returns (RoleAssignment memory data_);
+    /// @return data_ The custom data.
+    function roleData(uint256 _recordId, bytes32 _role, address _grantee) external view returns (bytes memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _recordId The record identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that received the role.
+    /// @return expirationDate_ The expiration date.
     function roleExpirationDate(
         uint256 _recordId,
         bytes32 _role,
         address _grantee
     ) external view returns (uint64 expirationDate_);
 
+    /// @notice Returns the expiration date of a role assignment.
+    /// @param _recordId The record identifier.
+    /// @param _role The role identifier.
+    /// @param _grantee The user that received the role.
+    /// @return revocable_ Whether the role is revocable or not.
+    function isRoleRevocable(
+        uint256 _recordId,
+        bytes32 _role,
+        address _grantee
+    ) external view returns (bool revocable_);
+
     /// @notice Checks if the grantor approved the operator for all NFTs.
     /// @param _tokenAddress The token address.
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
+    /// @return isApproved_ Whether the operator is approved or not.
     function isRoleApprovedForAll(
         address _tokenAddress,
         address _grantor,
         address _operator
-    ) external view returns (bool);
+    ) external view returns (bool isApproved_);
 }

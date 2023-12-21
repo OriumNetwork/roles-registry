@@ -566,8 +566,17 @@ describe('SftRolesRegistrySingleRole', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).roleData(GrantRoleData.recordId, GrantRoleData.role, anotherUser.address),
       ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+
       await expect(
         SftRolesRegistry.connect(grantor).roleExpirationDate(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          anotherUser.address,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: grantee mismatch')
+
+      await expect(
+        SftRolesRegistry.connect(grantor).isRoleRevocable(
           GrantRoleData.recordId,
           GrantRoleData.role,
           anotherUser.address,
@@ -584,15 +593,21 @@ describe('SftRolesRegistrySingleRole', async () => {
         ),
       ).to.be.equal(GrantRoleData.expirationDate)
 
-      const roleDate = await SftRolesRegistry.connect(grantor).roleData(
-        GrantRoleData.recordId,
-        GrantRoleData.role,
-        GrantRoleData.grantee,
-      )
-      expect(roleDate.grantee).to.be.equal(GrantRoleData.grantee)
-      expect(roleDate.expirationDate).to.be.equal(GrantRoleData.expirationDate)
-      expect(roleDate.revocable).to.be.equal(GrantRoleData.revocable)
-      expect(roleDate.data).to.be.equal(GrantRoleData.data)
+      expect(
+        await SftRolesRegistry.connect(grantor).roleData(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(GrantRoleData.data)
+
+      expect(
+        await SftRolesRegistry.connect(grantor).isRoleRevocable(
+          GrantRoleData.recordId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(GrantRoleData.revocable)
     })
   })
 
@@ -602,7 +617,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should return true if IERCXXXX interface id', async () => {
-      expect(await SftRolesRegistry.supportsInterface('0xa4629326')).to.be.true
+      expect(await SftRolesRegistry.supportsInterface('0x42ba720c')).to.be.true
     })
   })
 })
