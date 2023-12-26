@@ -4,10 +4,16 @@ import { beforeEach } from 'mocha'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { ONE_DAY, generateRoleId, buildRecord, buildGrantRole } from './helpers/mockData'
-import { Record, GrantRoleData } from './types'
+import { Commitment, GrantRoleData } from './types'
 import { generateRandomInt } from '../helpers'
-import { assertCreateRecordEvent, assertGrantRoleEvent, assertRevokeRoleEvent } from './helpers/assertEvents'
+import { assertCreateCommitmentEvent, assertGrantRoleEvent, assertRevokeRoleEvent } from './helpers/assertEvents'
+import {
+  ONE_DAY,
+  generateRoleId,
+  buildCommitment,
+  buildGrantRole,
+  getSftRolesRegistryInterfaceId,
+} from './helpers/mockData'
 
 const { AddressZero } = ethers.constants
 
@@ -34,94 +40,94 @@ describe('SftRolesRegistry', async () => {
     await loadFixture(deployContracts)
   })
 
-  describe('createRecordFrom', async () => {
+  describe('commitTokens', async () => {
     it('should revert when sender is not grantor or approved', async () => {
-      const record = buildRecord({
+      const commitment = buildCommitment({
         grantor: grantor.address,
         tokenAddress: MockToken.address,
       })
       await expect(
-        SftRolesRegistry.connect(anotherUser).createRecordFrom(
-          record.grantor,
-          record.tokenAddress,
-          record.tokenId,
-          record.tokenAmount,
+        SftRolesRegistry.connect(anotherUser).commitTokens(
+          commitment.grantor,
+          commitment.tokenAddress,
+          commitment.tokenId,
+          commitment.tokenAmount,
         ),
       ).to.be.revertedWith('SftRolesRegistry: account not approved')
     })
 
     it('should revert when tokenAmount is zero', async () => {
-      const record = buildRecord({
+      const commitment = buildCommitment({
         grantor: grantor.address,
         tokenAddress: MockToken.address,
         tokenAmount: 0,
       })
       await expect(
-        SftRolesRegistry.connect(grantor).createRecordFrom(
-          record.grantor,
-          record.tokenAddress,
-          record.tokenId,
-          record.tokenAmount,
+        SftRolesRegistry.connect(grantor).commitTokens(
+          commitment.grantor,
+          commitment.tokenAddress,
+          commitment.tokenId,
+          commitment.tokenAmount,
         ),
       ).to.be.revertedWith('SftRolesRegistry: tokenAmount must be greater than zero')
     })
 
     it('should revert without a reason if tokenAddress is not an ERC-1155 contract', async () => {
-      const record = buildRecord({
+      const commitment = buildCommitment({
         grantor: grantor.address,
         tokenAmount: generateRandomInt(),
       })
       await expect(
-        SftRolesRegistry.connect(grantor).createRecordFrom(
-          record.grantor,
-          record.tokenAddress,
-          record.tokenId,
-          record.tokenAmount,
+        SftRolesRegistry.connect(grantor).commitTokens(
+          commitment.grantor,
+          commitment.tokenAddress,
+          commitment.tokenId,
+          commitment.tokenAmount,
         ),
       ).to.be.reverted
     })
 
     it('should revert if contract is not approved to transfer tokens', async () => {
-      const record = buildRecord({
+      const commitment = buildCommitment({
         grantor: grantor.address,
         tokenAddress: MockToken.address,
         tokenAmount: generateRandomInt(),
       })
-      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount)
+      await MockToken.mint(grantor.address, commitment.tokenId, commitment.tokenAmount)
       await expect(
-        SftRolesRegistry.connect(grantor).createRecordFrom(
-          record.grantor,
-          record.tokenAddress,
-          record.tokenId,
-          record.tokenAmount,
+        SftRolesRegistry.connect(grantor).commitTokens(
+          commitment.grantor,
+          commitment.tokenAddress,
+          commitment.tokenId,
+          commitment.tokenAmount,
         ),
       ).to.be.revertedWith('ERC1155: caller is not token owner or approved')
     })
 
     it('should revert when grantor does not have enough tokens', async () => {
-      const record = buildRecord({
+      const commitment = buildCommitment({
         grantor: grantor.address,
         tokenAddress: MockToken.address,
         tokenAmount: generateRandomInt() + 1,
       })
-      await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount - 1)
+      await MockToken.mint(grantor.address, commitment.tokenId, commitment.tokenAmount - 1)
       await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
       await expect(
-        SftRolesRegistry.connect(grantor).createRecordFrom(
-          record.grantor,
-          record.tokenAddress,
-          record.tokenId,
-          record.tokenAmount,
+        SftRolesRegistry.connect(grantor).commitTokens(
+          commitment.grantor,
+          commitment.tokenAddress,
+          commitment.tokenId,
+          commitment.tokenAmount,
         ),
       ).to.be.revertedWith('ERC1155: insufficient balance for transfer')
     })
 
-    it('should create record when sender is grantor', async () => {
-      await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+    it('should create commitment when sender is grantor', async () => {
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
     })
 
-    it('should create record when sender is approved', async () => {
-      await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1, anotherUser)
+    it('should create commitment when sender is approved', async () => {
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1, anotherUser)
     })
   })
 
@@ -129,9 +135,9 @@ describe('SftRolesRegistry', async () => {
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await buildGrantRole({
-        recordId: 1,
+        commitmentId: 1,
         grantee: grantee.address,
       })
     })
@@ -139,7 +145,7 @@ describe('SftRolesRegistry', async () => {
     it('should revert when sender is not grantor or approved', async () => {
       await expect(
         SftRolesRegistry.connect(anotherUser).grantRole(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
           GrantRoleData.expirationDate,
@@ -152,7 +158,7 @@ describe('SftRolesRegistry', async () => {
     it('should revert when expirationDate is zero', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
           await time.latest(),
@@ -163,10 +169,10 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should revert when role is not revocable and is not expired', async () => {
-      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.recordId, GrantRoleData.grantee, false)
+      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.grantee, false)
       await expect(
         SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
           GrantRoleData.expirationDate,
@@ -177,14 +183,14 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should grant role when sender is grantor', async () => {
-      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.recordId, GrantRoleData.grantee)
+      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.grantee)
     })
 
     it('should grant role when sender is approved', async () => {
       await assertGrantRoleEvent(
         SftRolesRegistry,
         grantor,
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         GrantRoleData.grantee,
         true,
         anotherUser,
@@ -193,18 +199,18 @@ describe('SftRolesRegistry', async () => {
   })
 
   describe('revokeRole', async () => {
-    let RecordCreated: Record
+    let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      RecordCreated = await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+      CommitmentCreated = await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
     it('should revert when sender is not grantor or approved', async () => {
       await expect(
         SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
         ),
@@ -212,10 +218,10 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should revert when role assignment does not exist', async () => {
-      // different recordId
+      // different commitmentId
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          GrantRoleData.recordId + 1,
+          GrantRoleData.commitmentId + 1,
           GrantRoleData.role,
           GrantRoleData.grantee,
         ),
@@ -224,7 +230,7 @@ describe('SftRolesRegistry', async () => {
       // different role
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           generateRoleId('ANOTHER_ROLE'),
           GrantRoleData.grantee,
         ),
@@ -233,7 +239,7 @@ describe('SftRolesRegistry', async () => {
       // different grantee
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          GrantRoleData.recordId + 1,
+          GrantRoleData.commitmentId + 1,
           GrantRoleData.role,
           anotherUser.address,
         ),
@@ -244,13 +250,13 @@ describe('SftRolesRegistry', async () => {
       const roleAssignment = await assertGrantRoleEvent(
         SftRolesRegistry,
         grantor,
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         grantee.address,
         false,
       )
       await expect(
         SftRolesRegistry.connect(grantor).revokeRoleFrom(
-          roleAssignment.recordId,
+          roleAssignment.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
         ),
@@ -261,30 +267,30 @@ describe('SftRolesRegistry', async () => {
       const roleAssignment = await assertGrantRoleEvent(
         SftRolesRegistry,
         grantor,
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         grantee.address,
         false,
       )
       await time.increase(ONE_DAY)
-      await assertRevokeRoleEvent(SftRolesRegistry, grantor, roleAssignment.recordId, roleAssignment.role, grantee)
+      await assertRevokeRoleEvent(SftRolesRegistry, grantor, roleAssignment.commitmentId, roleAssignment.role, grantee)
     })
 
     it('should revoke when role is revocable', async () => {
-      await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.recordId, GrantRoleData.role, grantee)
+      await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
     })
 
     it('should revoke when sender is grantee', async () => {
       const roleAssignment = await assertGrantRoleEvent(
         SftRolesRegistry,
         grantor,
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         grantee.address,
         false,
       )
       await assertRevokeRoleEvent(
         SftRolesRegistry,
         grantor,
-        roleAssignment.recordId,
+        roleAssignment.commitmentId,
         roleAssignment.role,
         grantee,
         grantee,
@@ -292,39 +298,39 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should revoke when sender is approved by grantee', async () => {
-      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.recordId, grantee.address, false)
+      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, grantee.address, false)
       await SftRolesRegistry.connect(grantee).setRoleApprovalForAll(
-        RecordCreated.tokenAddress,
+        CommitmentCreated.tokenAddress,
         anotherUser.address,
         true,
       )
 
       await expect(
         SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           grantee.address,
         ),
       )
         .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.recordId, GrantRoleData.role, grantee.address)
+        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, grantee.address)
     })
 
     it('should revoke when sender is approved by grantor', async () => {
       await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
-        RecordCreated.tokenAddress,
+        CommitmentCreated.tokenAddress,
         anotherUser.address,
         true,
       )
       await expect(
         SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
-          GrantRoleData.recordId,
+          GrantRoleData.commitmentId,
           GrantRoleData.role,
           grantee.address,
         ),
       )
         .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.recordId, GrantRoleData.role, grantee.address)
+        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, grantee.address)
     })
   })
 
@@ -332,42 +338,42 @@ describe('SftRolesRegistry', async () => {
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
     it('should revert when sender is not grantor or approved', async () => {
-      await expect(SftRolesRegistry.connect(anotherUser).withdrawFrom(GrantRoleData.recordId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(anotherUser).withdrawFrom(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: account not approved',
       )
     })
 
     it('should revert when there is an active role', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: role is not expired and is not revocable',
       )
     })
 
     it('should withdraw when there are revocable roles', async () => {
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId))
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(GrantRoleData.recordId)
+        .withArgs(GrantRoleData.commitmentId)
     })
 
     it('should withdraw when there are no roles', async () => {
-      await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.recordId, GrantRoleData.role, grantee)
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId))
+      await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(GrantRoleData.recordId)
+        .withArgs(GrantRoleData.commitmentId)
     })
 
     it('should withdraw when there are expired roles', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
       await time.increase(ONE_DAY)
-      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.recordId))
+      await expect(SftRolesRegistry.connect(grantor).withdrawFrom(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'Withdrew')
-        .withArgs(GrantRoleData.recordId)
+        .withArgs(GrantRoleData.commitmentId)
     })
   })
 
@@ -382,25 +388,25 @@ describe('SftRolesRegistry', async () => {
   })
 
   describe('View Functions', async () => {
-    let RecordCreated: Record
+    let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      RecordCreated = await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+      CommitmentCreated = await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
-    it('recordInfo', async () => {
-      const record = await SftRolesRegistry.recordInfo(GrantRoleData.recordId)
-      expect(record.grantor_).to.be.equal(RecordCreated.grantor)
-      expect(record.tokenAddress_).to.be.equal(RecordCreated.tokenAddress)
-      expect(record.tokenId_).to.be.equal(RecordCreated.tokenId)
-      expect(record.tokenAmount_).to.be.equal(RecordCreated.tokenAmount)
+    it('commitmentInfo', async () => {
+      const commitment = await SftRolesRegistry.commitmentInfo(GrantRoleData.commitmentId)
+      expect(commitment.grantor_).to.be.equal(CommitmentCreated.grantor)
+      expect(commitment.tokenAddress_).to.be.equal(CommitmentCreated.tokenAddress)
+      expect(commitment.tokenId_).to.be.equal(CommitmentCreated.tokenId)
+      expect(commitment.tokenAmount_).to.be.equal(CommitmentCreated.tokenAmount)
     })
 
     it('roleData', async () => {
       const roleData = await SftRolesRegistry.roleData(
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         GrantRoleData.role,
         GrantRoleData.grantee,
       )
@@ -409,7 +415,7 @@ describe('SftRolesRegistry', async () => {
 
     it('roleExpirationDate', async () => {
       const roleExpirationDate = await SftRolesRegistry.roleExpirationDate(
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         GrantRoleData.role,
         GrantRoleData.grantee,
       )
@@ -418,7 +424,7 @@ describe('SftRolesRegistry', async () => {
 
     it('isRoleRevocable', async () => {
       const isRoleRevocable = await SftRolesRegistry.isRoleRevocable(
-        GrantRoleData.recordId,
+        GrantRoleData.commitmentId,
         GrantRoleData.role,
         GrantRoleData.grantee,
       )
@@ -431,8 +437,9 @@ describe('SftRolesRegistry', async () => {
       expect(await SftRolesRegistry.supportsInterface('0x4e2312e0')).to.be.true
     })
 
-    it('should return true if SftRolesRegistry interface id (0x89cb6ab6)', async () => {
-      expect(await SftRolesRegistry.supportsInterface('0xf254051c')).to.be.true
+    it('should return true if SftRolesRegistry interface id', async () => {
+      const interfaceId = getSftRolesRegistryInterfaceId()
+      expect(await SftRolesRegistry.supportsInterface(interfaceId)).to.be.true
     })
   })
 })

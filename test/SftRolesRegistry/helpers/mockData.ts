@@ -1,23 +1,24 @@
 import { solidityKeccak256 } from 'ethers/lib/utils'
-import { GrantRoleData, Record, RevokeRoleData, RoleAssignment } from '../types'
+import { GrantRoleData, Commitment, RoleAssignment } from '../types'
 import { generateRandomInt } from '../../helpers'
-import { ethers } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
+import { ethers } from 'ethers'
+import { ISftRolesRegistry__factory } from '../../../typechain-types'
 
 const { HashZero, AddressZero } = ethers.constants
 export const ONE_DAY = 60 * 60 * 24
 
-export function buildRecord({
+export function buildCommitment({
   grantor = AddressZero,
   tokenAddress = AddressZero,
   tokenId = generateRandomInt(),
   tokenAmount = generateRandomInt(),
-}): Record {
+}): Commitment {
   return { grantor, tokenAddress, tokenId, tokenAmount }
 }
 
 export async function buildGrantRole({
-  recordId = generateRandomInt(),
+  commitmentId = generateRandomInt(),
   role = 'UNIQUE_ROLE',
   grantee = AddressZero,
   expirationDate = null,
@@ -25,7 +26,7 @@ export async function buildGrantRole({
   data = HashZero,
 }): Promise<GrantRoleData> {
   return {
-    recordId,
+    commitmentId,
     role: generateRoleId(role),
     grantee,
     expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,
@@ -76,13 +77,17 @@ export async function buildRoleAssignment({
     data,
   }
 }
-export function buildRevokeRoleData(roleAssignment: RoleAssignment): RevokeRoleData {
-  return {
-    nonce: roleAssignment.nonce,
-    role: roleAssignment.role,
-    tokenAddress: roleAssignment.tokenAddress,
-    tokenId: roleAssignment.tokenId,
-    grantor: roleAssignment.grantor,
-    grantee: roleAssignment.grantee,
+
+export function getSftRolesRegistryInterfaceId() {
+  const interfaceI = ISftRolesRegistry__factory.createInterface()
+  return generateErc165InterfaceId(interfaceI)
+}
+
+function generateErc165InterfaceId(contractInterface: ethers.utils.Interface) {
+  let interfaceID = ethers.constants.Zero
+  const functions: string[] = Object.keys(contractInterface.functions).filter(f => f !== 'supportsInterface(bytes4)')
+  for (let i = 0; i < functions.length; i++) {
+    interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
   }
+  return interfaceID
 }

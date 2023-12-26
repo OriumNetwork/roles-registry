@@ -24,9 +24,9 @@ library LinkedLists {
     }
 
     struct Lists {
-        // headKey => recordId
+        // headKey => commitmentId
         mapping(bytes32 => uint256) heads;
-        // hash(recordId, role, grantee) => item
+        // hash(commitmentId, role, grantee) => item
         mapping(uint256 => ListItem) items;
     }
 

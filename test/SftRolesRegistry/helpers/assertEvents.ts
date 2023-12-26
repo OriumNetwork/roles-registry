@@ -1,61 +1,73 @@
-import { buildGrantRole, buildRecord } from './mockData'
+import { buildGrantRole, buildCommitment } from './mockData'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-export async function assertCreateRecordEvent(
+export async function assertCreateCommitmentEvent(
   SftRolesRegistry: Contract,
   MockToken: Contract,
   grantor: SignerWithAddress,
-  expectedRecordId: number,
+  expectedcommitmentId: number,
   anotherUser?: SignerWithAddress,
 ) {
-  const record = buildRecord({
+  const commitment = buildCommitment({
     grantor: grantor.address,
     tokenAddress: MockToken.address,
   })
-  await MockToken.mint(grantor.address, record.tokenId, record.tokenAmount)
+  await MockToken.mint(grantor.address, commitment.tokenId, commitment.tokenAmount)
   await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
 
   if (anotherUser) {
-    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(record.tokenAddress, anotherUser.address, true)
+    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress, anotherUser.address, true)
   }
 
   await expect(
-    SftRolesRegistry.connect(anotherUser || grantor).createRecordFrom(
-      record.grantor,
-      record.tokenAddress,
-      record.tokenId,
-      record.tokenAmount,
+    SftRolesRegistry.connect(anotherUser || grantor).commitTokens(
+      commitment.grantor,
+      commitment.tokenAddress,
+      commitment.tokenId,
+      commitment.tokenAmount,
     ),
   )
-    .to.emit(SftRolesRegistry, 'RecordCreated')
-    .withArgs(record.grantor, expectedRecordId, record.tokenAddress, record.tokenId, record.tokenAmount)
+    .to.emit(SftRolesRegistry, 'TokensCommitted')
+    .withArgs(
+      commitment.grantor,
+      expectedcommitmentId,
+      commitment.tokenAddress,
+      commitment.tokenId,
+      commitment.tokenAmount,
+    )
     .to.emit(MockToken, 'TransferSingle')
-    .withArgs(SftRolesRegistry.address, grantor.address, SftRolesRegistry.address, record.tokenId, record.tokenAmount)
-  return { ...record, recordId: expectedRecordId }
+    .withArgs(
+      SftRolesRegistry.address,
+      grantor.address,
+      SftRolesRegistry.address,
+      commitment.tokenId,
+      commitment.tokenAmount,
+    )
+  return { ...commitment, commitmentId: expectedcommitmentId }
 }
 
 export async function assertGrantRoleEvent(
   SftRolesRegistry: Contract,
   grantor: SignerWithAddress,
-  recordId: number,
+  commitmentId: number,
   grantee: string,
   revocable = true,
   anotherUser?: SignerWithAddress,
 ) {
   const grantRoleData = await buildGrantRole({
-    recordId,
+    commitmentId,
     grantee,
     revocable,
   })
   if (anotherUser) {
-    const record = await SftRolesRegistry.recordInfo(recordId)
-    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(record.tokenAddress_, anotherUser.address, true)
+    const commitment = await SftRolesRegistry.commitmentInfo(commitmentId)
+    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress_, anotherUser.address, true)
   }
   await expect(
     SftRolesRegistry.connect(anotherUser || grantor).grantRole(
-      recordId,
+      commitmentId,
       grantRoleData.role,
       grantee,
       grantRoleData.expirationDate,
@@ -65,7 +77,7 @@ export async function assertGrantRoleEvent(
   )
     .to.emit(SftRolesRegistry, 'RoleGranted')
     .withArgs(
-      recordId,
+      commitmentId,
       grantRoleData.role,
       grantee,
       grantRoleData.expirationDate,
@@ -78,17 +90,17 @@ export async function assertGrantRoleEvent(
 export async function assertRevokeRoleEvent(
   SftRolesRegistry: Contract,
   grantor: SignerWithAddress,
-  recordId: number,
+  commitmentId: number,
   role: string,
   grantee: SignerWithAddress,
   revoker?: SignerWithAddress,
 ) {
   if (revoker) {
-    const record = await SftRolesRegistry.recordInfo(recordId)
-    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(record.tokenAddress_, revoker.address, true)
+    const commitment = await SftRolesRegistry.commitmentInfo(commitmentId)
+    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress_, revoker.address, true)
   }
-  await expect(SftRolesRegistry.connect(revoker || grantor).revokeRoleFrom(recordId, role, grantee.address))
+  await expect(SftRolesRegistry.connect(revoker || grantor).revokeRoleFrom(commitmentId, role, grantee.address))
     .to.emit(SftRolesRegistry, 'RoleRevoked')
-    .withArgs(recordId, role, grantee.address)
-  return { recordId, role, grantee: grantee.address }
+    .withArgs(commitmentId, role, grantee.address)
+  return { commitmentId, role, grantee: grantee.address }
 }

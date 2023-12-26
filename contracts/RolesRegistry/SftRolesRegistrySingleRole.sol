@@ -13,15 +13,15 @@ import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC16
 contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     bytes32 public constant UNIQUE_ROLE = keccak256('UNIQUE_ROLE');
 
-    uint256 public recordCount;
+    uint256 public commitmentCount;
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public roleApprovals;
 
-    // recordId => Record
-    mapping(uint256 => Record) public records;
+    // commitmentId => Commitment
+    mapping(uint256 => Commitment) public commitments;
 
-    // recordId => role => RoleAssignment
+    // commitmentId => role => RoleAssignment
     mapping(uint256 => mapping(bytes32 => RoleAssignment)) internal roleAssignments;
 
     modifier onlyOwnerOrApproved(address _account, address _tokenAddress) {
@@ -33,12 +33,12 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     modifier sameGrantee(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
     ) {
         require(
-            _grantee != address(0) && _grantee == roleAssignments[_recordId][_role].grantee,
+            _grantee != address(0) && _grantee == roleAssignments[_commitmentId][_role].grantee,
             'SftRolesRegistry: grantee mismatch'
         );
         _;
@@ -46,65 +46,69 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
 
     /** External Functions **/
 
-    function createRecordFrom(
+    function commitTokens(
         address _grantor,
         address _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount
-    ) external override onlyOwnerOrApproved(_grantor, _tokenAddress) returns (uint256 recordId_) {
+    ) external override onlyOwnerOrApproved(_grantor, _tokenAddress) returns (uint256 commitmentId_) {
         require(_tokenAmount > 0, 'SftRolesRegistry: tokenAmount must be greater than zero');
-        recordId_ = _createRecord(_grantor, _tokenAddress, _tokenId, _tokenAmount);
+        commitmentId_ = _createCommitment(_grantor, _tokenAddress, _tokenId, _tokenAmount);
     }
 
     function grantRole(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee,
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
-    ) external override onlyOwnerOrApproved(records[_recordId].grantor, records[_recordId].tokenAddress) {
+    )
+        external
+        override
+        onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress)
+    {
         require(_role == UNIQUE_ROLE, 'SftRolesRegistry: role not supported');
         require(_expirationDate > block.timestamp, 'SftRolesRegistry: expiration date must be in the future');
-        _grantOrUpdateRole(_recordId, _role, _grantee, _expirationDate, _revocable, _data);
+        _grantOrUpdateRole(_commitmentId, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
     function revokeRoleFrom(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
-    ) external override sameGrantee(_recordId, _role, _grantee) {
-        RoleAssignment storage roleAssignment = roleAssignments[_recordId][_role];
-        Record storage record = records[_recordId];
-        address caller = _findCaller(record.grantor, roleAssignment.grantee, record.tokenAddress);
+    ) external override sameGrantee(_commitmentId, _role, _grantee) {
+        RoleAssignment storage roleAssignment = roleAssignments[_commitmentId][_role];
+        Commitment storage commitment = commitments[_commitmentId];
+        address caller = _findCaller(commitment.grantor, roleAssignment.grantee, commitment.tokenAddress);
         if (roleAssignment.expirationDate > block.timestamp && !roleAssignment.revocable) {
             // if role is not expired and is not revocable, only the grantee can revoke it
             require(caller == roleAssignment.grantee, 'SftRolesRegistry: role is not expired and is not revocable');
         }
-        emit RoleRevoked(_recordId, _role, roleAssignment.grantee);
-        delete roleAssignments[_recordId][_role];
+        emit RoleRevoked(_commitmentId, _role, roleAssignment.grantee);
+        delete roleAssignments[_commitmentId][_role];
     }
 
     function withdrawFrom(
-        uint256 _recordId
-    ) external onlyOwnerOrApproved(records[_recordId].grantor, records[_recordId].tokenAddress) {
+        uint256 _commitmentId
+    ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         require(
-            roleAssignments[_recordId][UNIQUE_ROLE].expirationDate < block.timestamp,
+            roleAssignments[_commitmentId][UNIQUE_ROLE].expirationDate < block.timestamp,
             'SftRolesRegistry: token has an active role'
         );
 
-        delete roleAssignments[_recordId][UNIQUE_ROLE];
+        delete roleAssignments[_commitmentId][UNIQUE_ROLE];
 
         _transferFrom(
             address(this),
-            records[_recordId].grantor,
-            records[_recordId].tokenAddress,
-            records[_recordId].tokenId,
-            records[_recordId].tokenAmount
+            commitments[_commitmentId].grantor,
+            commitments[_commitmentId].tokenAddress,
+            commitments[_commitmentId].tokenId,
+            commitments[_commitmentId].tokenAmount
         );
 
-        delete records[_recordId];
-        emit Withdrew(_recordId);
+        delete commitments[_commitmentId];
+        emit Withdrew(_commitmentId);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
@@ -114,38 +118,38 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
 
     /** View Functions **/
 
-    function recordInfo(
-        uint256 _recordId
+    function commitmentInfo(
+        uint256 _commitmentId
     ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_) {
-        Record memory record = records[_recordId];
-        grantor_ = record.grantor;
-        tokenAddress_ = record.tokenAddress;
-        tokenId_ = record.tokenId;
-        tokenAmount_ = record.tokenAmount;
+        Commitment memory commitment = commitments[_commitmentId];
+        grantor_ = commitment.grantor;
+        tokenAddress_ = commitment.tokenAddress;
+        tokenId_ = commitment.tokenId;
+        tokenAmount_ = commitment.tokenAmount;
     }
 
     function roleData(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
-    ) external view sameGrantee(_recordId, _role, _grantee) returns (bytes memory data_) {
-        return roleAssignments[_recordId][_role].data;
+    ) external view sameGrantee(_commitmentId, _role, _grantee) returns (bytes memory data_) {
+        return roleAssignments[_commitmentId][_role].data;
     }
 
     function roleExpirationDate(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
-    ) external view sameGrantee(_recordId, _role, _grantee) returns (uint64 expirationDate_) {
-        return roleAssignments[_recordId][_role].expirationDate;
+    ) external view sameGrantee(_commitmentId, _role, _grantee) returns (uint64 expirationDate_) {
+        return roleAssignments[_commitmentId][_role].expirationDate;
     }
 
     function isRoleRevocable(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
-    ) external view sameGrantee(_recordId, _role, _grantee) returns (bool revocable_) {
-        return roleAssignments[_recordId][_role].revocable;
+    ) external view sameGrantee(_commitmentId, _role, _grantee) returns (bool revocable_) {
+        return roleAssignments[_commitmentId][_role].revocable;
     }
 
     function isRoleApprovedForAll(
@@ -164,28 +168,28 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
 
     /** Helper Functions **/
 
-    function _createRecord(
+    function _createCommitment(
         address _grantor,
         address _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount
-    ) internal returns (uint256 recordId_) {
-        recordId_ = ++recordCount;
-        records[recordId_] = Record(_grantor, _tokenAddress, _tokenId, _tokenAmount);
+    ) internal returns (uint256 commitmentId_) {
+        commitmentId_ = ++commitmentCount;
+        commitments[commitmentId_] = Commitment(_grantor, _tokenAddress, _tokenId, _tokenAmount);
         _transferFrom(_grantor, address(this), _tokenAddress, _tokenId, _tokenAmount);
-        emit RecordCreated(_grantor, recordId_, _tokenAddress, _tokenId, _tokenAmount);
+        emit TokensCommitted(_grantor, commitmentId_, _tokenAddress, _tokenId, _tokenAmount);
     }
 
     function _grantOrUpdateRole(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee,
         uint64 _expirationDate,
         bool _revocable,
         bytes calldata _data
     ) internal {
-        roleAssignments[_recordId][_role] = RoleAssignment(_grantee, _expirationDate, _revocable, _data);
-        emit RoleGranted(_recordId, _role, _grantee, _expirationDate, _revocable, _data);
+        roleAssignments[_commitmentId][_role] = RoleAssignment(_grantee, _expirationDate, _revocable, _data);
+        emit RoleGranted(_commitmentId, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
     function _transferFrom(

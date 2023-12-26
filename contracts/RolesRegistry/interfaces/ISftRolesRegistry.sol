@@ -4,9 +4,6 @@ pragma solidity 0.8.9;
 
 import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
-/// @title ERC-XXXX Semi-Fungible Token Roles
-/// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
-/// Note: the ERC-165 identifier for this interface is 0xf254051c
 interface ISftRolesRegistry is IERC165 {
     struct RoleAssignment {
         address grantee;
@@ -15,7 +12,7 @@ interface ISftRolesRegistry is IERC165 {
         bytes data;
     }
 
-    struct Record {
+    struct Commitment {
         address grantor;
         address tokenAddress;
         uint256 tokenId;
@@ -24,29 +21,29 @@ interface ISftRolesRegistry is IERC165 {
 
     /** Events **/
 
-    /// @notice Emitted when a record is created.
+    /// @notice Emitted when tokens are committed (deposited or frozen).
     /// @param _grantor The owner of the NFTs.
-    /// @param _recordId The identifier of the record created.
+    /// @param _commitmentId The identifier of the commitment created.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount.
-    event RecordCreated(
+    event TokensCommitted(
         address indexed _grantor,
-        uint256 indexed _recordId,
+        uint256 indexed _commitmentId,
         address indexed _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount
     );
 
     /// @notice Emitted when a role is granted.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user receiving the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
     event RoleGranted(
-        uint256 indexed _recordId,
+        uint256 indexed _commitmentId,
         bytes32 indexed _role,
         address indexed _grantee,
         uint64 _expirationDate,
@@ -55,14 +52,14 @@ interface ISftRolesRegistry is IERC165 {
     );
 
     /// @notice Emitted when a role is revoked.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that receives the role revocation.
-    event RoleRevoked(uint256 indexed _recordId, bytes32 indexed _role, address indexed _grantee);
+    event RoleRevoked(uint256 indexed _commitmentId, bytes32 indexed _role, address indexed _grantee);
 
-    /// @notice Emitted when a user withdraws tokens from a record.
-    /// @param _recordId The record identifier.
-    event Withdrew(uint256 indexed _recordId);
+    /// @notice Emitted when a user withdraws tokens from a commitment.
+    /// @param _commitmentId The commitment identifier.
+    event Withdrew(uint256 indexed _commitmentId);
 
     /// @notice Emitted when a user is approved to manage roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -72,28 +69,28 @@ interface ISftRolesRegistry is IERC165 {
 
     /** External Functions **/
 
-    /// @notice Creates a new record for on behalf of a user.
+    /// @notice Commits tokens (deposits on a contract or freezes balance).
     /// @param _grantor The owner of the NFTs.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount.
-    /// @return recordId_ The unique identifier of the record created.
-    function createRecordFrom(
+    /// @return commitmentId_ The unique identifier of the commitment created.
+    function commitTokens(
         address _grantor,
         address _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount
-    ) external returns (uint256 recordId_);
+    ) external returns (uint256 commitmentId_);
 
     /// @notice Grants a role to `_grantee`.
-    /// @param _recordId The identifier of the record.
+    /// @param _commitmentId The identifier of the commitment.
     /// @param _role The role identifier.
     /// @param _grantee The user receiving the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
     function grantRole(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee,
         uint64 _expirationDate,
@@ -102,14 +99,14 @@ interface ISftRolesRegistry is IERC165 {
     ) external;
 
     /// @notice Revokes a role on behalf of a user.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that gets their role revoked.
-    function revokeRoleFrom(uint256 _recordId, bytes32 _role, address _grantee) external;
+    function revokeRoleFrom(uint256 _commitmentId, bytes32 _role, address _grantee) external;
 
     /// @notice Withdraws tokens back to grantor.
-    /// @param _recordId The record identifier.
-    function withdrawFrom(uint256 _recordId) external;
+    /// @param _commitmentId The commitment identifier.
+    function withdrawFrom(uint256 _commitmentId) external;
 
     /// @notice Approves operator to grant and revoke roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -119,41 +116,45 @@ interface ISftRolesRegistry is IERC165 {
 
     /** View Functions **/
 
-    /// @notice Returns all the information regarding a record.
-    /// @param _recordId The record identifier.
-    /// @return grantor_ The record owner.
+    /// @notice Returns all information regarding a commitment.
+    /// @param _commitmentId The commitment identifier.
+    /// @return grantor_ The commitment owner.
     /// @return tokenAddress_ The token address.
     /// @return tokenId_ The token identifier.
     /// @return tokenAmount_ The token amount.
-    function recordInfo(
-        uint256 _recordId
+    function commitmentInfo(
+        uint256 _commitmentId
     ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_);
 
     /// @notice Returns the custom data of a role assignment.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that received the role.
     /// @return data_ The custom data.
-    function roleData(uint256 _recordId, bytes32 _role, address _grantee) external view returns (bytes memory data_);
+    function roleData(
+        uint256 _commitmentId,
+        bytes32 _role,
+        address _grantee
+    ) external view returns (bytes memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that received the role.
     /// @return expirationDate_ The expiration date.
     function roleExpirationDate(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
     ) external view returns (uint64 expirationDate_);
 
     /// @notice Returns the expiration date of a role assignment.
-    /// @param _recordId The record identifier.
+    /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that received the role.
     /// @return revocable_ Whether the role is revocable or not.
     function isRoleRevocable(
-        uint256 _recordId,
+        uint256 _commitmentId,
         bytes32 _role,
         address _grantee
     ) external view returns (bool revocable_);
