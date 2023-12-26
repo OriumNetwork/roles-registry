@@ -321,7 +321,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revert when sender is not grantor or approved', async () => {
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           grantee.address,
@@ -331,7 +331,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revert when the grantee is not the same', async () => {
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           anotherUser.address,
@@ -361,7 +361,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         ),
       ).to.not.be.reverted
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(newcommitmentId, GrantRoleData.role, GrantRoleData.grantee),
+        SftRolesRegistry.connect(grantor).revokeRole(newcommitmentId, GrantRoleData.role, GrantRoleData.grantee),
       ).to.be.revertedWith('SftRolesRegistry: role is not expired and is not revocable')
     })
 
@@ -378,7 +378,7 @@ describe('SftRolesRegistrySingleRole', async () => {
       ).to.not.be.reverted
 
       await expect(
-        SftRolesRegistry.connect(grantee).revokeRoleFrom(
+        SftRolesRegistry.connect(grantee).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -390,7 +390,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revoke role when sender is grantor', async () => {
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -402,7 +402,7 @@ describe('SftRolesRegistrySingleRole', async () => {
 
     it('should revoke role when sender is grantee', async () => {
       await expect(
-        SftRolesRegistry.connect(grantee).revokeRoleFrom(
+        SftRolesRegistry.connect(grantee).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -419,7 +419,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         true,
       )
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -436,7 +436,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         true,
       )
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,

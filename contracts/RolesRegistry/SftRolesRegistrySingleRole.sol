@@ -73,7 +73,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         _grantOrUpdateRole(_commitmentId, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
-    function revokeRoleFrom(
+    function revokeRole(
         uint256 _commitmentId,
         bytes32 _role,
         address _grantee

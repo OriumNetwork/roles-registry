@@ -69,7 +69,7 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder {
         _grantOrUpdateRole(_commitmentId, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
-    function revokeRoleFrom(uint256 _commitmentId, bytes32 _role, address _grantee) external override {
+    function revokeRole(uint256 _commitmentId, bytes32 _role, address _grantee) external override {
         uint256 itemId = _getItemId(_commitmentId, _role, _grantee);
         LinkedLists.RoleData storage data = lists.items[itemId].data;
         require(data.expirationDate > 0, 'SftRolesRegistry: could not find role assignment');

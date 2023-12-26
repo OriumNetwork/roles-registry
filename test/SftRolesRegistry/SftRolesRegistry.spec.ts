@@ -209,7 +209,7 @@ describe('SftRolesRegistry', async () => {
 
     it('should revert when sender is not grantor or approved', async () => {
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -220,7 +220,7 @@ describe('SftRolesRegistry', async () => {
     it('should revert when role assignment does not exist', async () => {
       // different commitmentId
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           GrantRoleData.commitmentId + 1,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -229,7 +229,7 @@ describe('SftRolesRegistry', async () => {
 
       // different role
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           GrantRoleData.commitmentId,
           generateRoleId('ANOTHER_ROLE'),
           GrantRoleData.grantee,
@@ -238,7 +238,7 @@ describe('SftRolesRegistry', async () => {
 
       // different grantee
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           GrantRoleData.commitmentId + 1,
           GrantRoleData.role,
           anotherUser.address,
@@ -255,7 +255,7 @@ describe('SftRolesRegistry', async () => {
         false,
       )
       await expect(
-        SftRolesRegistry.connect(grantor).revokeRoleFrom(
+        SftRolesRegistry.connect(grantor).revokeRole(
           roleAssignment.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
@@ -306,7 +306,7 @@ describe('SftRolesRegistry', async () => {
       )
 
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           grantee.address,
@@ -323,7 +323,7 @@ describe('SftRolesRegistry', async () => {
         true,
       )
       await expect(
-        SftRolesRegistry.connect(anotherUser).revokeRoleFrom(
+        SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           grantee.address,

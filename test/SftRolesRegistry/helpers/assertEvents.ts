@@ -99,7 +99,7 @@ export async function assertRevokeRoleEvent(
     const commitment = await SftRolesRegistry.commitmentInfo(commitmentId)
     await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress_, revoker.address, true)
   }
-  await expect(SftRolesRegistry.connect(revoker || grantor).revokeRoleFrom(commitmentId, role, grantee.address))
+  await expect(SftRolesRegistry.connect(revoker || grantor).revokeRole(commitmentId, role, grantee.address))
     .to.emit(SftRolesRegistry, 'RoleRevoked')
     .withArgs(commitmentId, role, grantee.address)
   return { commitmentId, role, grantee: grantee.address }

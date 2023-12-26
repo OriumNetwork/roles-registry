@@ -98,11 +98,11 @@ interface ISftRolesRegistry is IERC165 {
         bytes calldata _data
     ) external;
 
-    /// @notice Revokes a role on behalf of a user.
+    /// @notice Revokes a role.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
     /// @param _grantee The user that gets their role revoked.
-    function revokeRoleFrom(uint256 _commitmentId, bytes32 _role, address _grantee) external;
+    function revokeRole(uint256 _commitmentId, bytes32 _role, address _grantee) external;
 
     /// @notice Withdraws tokens back to grantor.
     /// @param _commitmentId The commitment identifier.
