@@ -92,7 +92,7 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder {
         emit RoleRevoked(_commitmentId, _role, _grantee);
     }
 
-    function withdrawFrom(
+    function withdrawNfts(
         uint256 _commitmentId
     ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         uint256 numberOfRoles = commitmentIdToRoles[_commitmentId].length();
@@ -128,7 +128,7 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder {
         );
 
         delete commitments[_commitmentId];
-        emit Withdrew(_commitmentId);
+        emit NftsWithdrawn(_commitmentId);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {

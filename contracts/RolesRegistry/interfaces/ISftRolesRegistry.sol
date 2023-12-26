@@ -57,9 +57,9 @@ interface ISftRolesRegistry is IERC165 {
     /// @param _grantee The user that receives the role revocation.
     event RoleRevoked(uint256 indexed _commitmentId, bytes32 indexed _role, address indexed _grantee);
 
-    /// @notice Emitted when a user withdraws tokens from a commitment.
+    /// @notice Emitted when a user withdrawNfts tokens from a commitment.
     /// @param _commitmentId The commitment identifier.
-    event Withdrew(uint256 indexed _commitmentId);
+    event NftsWithdrawn(uint256 indexed _commitmentId);
 
     /// @notice Emitted when a user is approved to manage roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -106,7 +106,7 @@ interface ISftRolesRegistry is IERC165 {
 
     /// @notice Withdraws tokens back to grantor.
     /// @param _commitmentId The commitment identifier.
-    function withdrawFrom(uint256 _commitmentId) external;
+    function withdrawNfts(uint256 _commitmentId) external;
 
     /// @notice Approves operator to grant and revoke roles on behalf of another user.
     /// @param _tokenAddress The token address.
