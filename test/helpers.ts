@@ -60,7 +60,7 @@ export async function assertListItem(
   itemExpirationDate: number,
   expectedPosition: number,
 ) {
-  const { expirationDate, previous, next } = await LinkedLists.getListItem(itemNonce)
+  const { expirationDate, previous } = await LinkedLists.getListItem(itemNonce)
   expect(expirationDate, `Item ${itemNonce} expiration date is not ${itemExpirationDate}`).to.be.equal(
     itemExpirationDate,
   )

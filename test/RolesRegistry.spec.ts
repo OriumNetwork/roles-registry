@@ -4,7 +4,6 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { expect } from 'chai'
 import { ERC7432InterfaceId } from './contants'
 import nock from 'nock'
-import axios from 'axios'
 import { defaultAbiCoder, solidityKeccak256 } from 'ethers/lib/utils'
 import { NftMetadata, RoleAssignment } from './types'
 
@@ -88,7 +87,6 @@ describe('RolesRegistry', () => {
   describe('Main Functions', async () => {
     let expirationDate: number
     const data = HashZero
-    let nftMetadata: NftMetadata
     let roleAssignment: RoleAssignment
 
     beforeEach(async () => {
@@ -96,9 +94,6 @@ describe('RolesRegistry', () => {
       const block = await hre.ethers.provider.getBlock(blockNumber)
       expirationDate = block.timestamp + ONE_DAY
 
-      const tokenURI = await mockERC721.tokenURI(tokenId)
-      const response = await axios.get(tokenURI)
-      nftMetadata = response.data
       roleAssignment = {
         role: PROPERTY_MANAGER,
         tokenAddress: mockERC721.address,
@@ -134,8 +129,7 @@ describe('RolesRegistry', () => {
       it('should NOT grant role from if expiration date is in the past', async () => {
         const blockNumber = await hre.ethers.provider.getBlockNumber()
         const block = await hre.ethers.provider.getBlock(blockNumber)
-        const expirationDateInThePast = block.timestamp - ONE_DAY
-        roleAssignment.expirationDate = expirationDateInThePast
+        roleAssignment.expirationDate = block.timestamp - ONE_DAY
 
         await expect(RolesRegistry.connect(grantor).grantRoleFrom(roleAssignment)).to.be.revertedWith(
           'RolesRegistry: expiration date must be in the future',

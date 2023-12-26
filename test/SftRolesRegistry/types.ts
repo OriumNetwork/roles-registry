@@ -9,7 +9,7 @@ export interface GrantRoleData {
   recordId: number
   role: string
   grantee: string
-  expirationDate: number | null
+  expirationDate: number
   revocable: boolean
   data: string
 }
