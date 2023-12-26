@@ -4,9 +4,10 @@ import { beforeEach } from 'mocha'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { generateRoleId, buildRecord, buildGrantRole } from './helpers'
+import { generateRoleId, buildRecord, buildGrantRole } from './helpers/mockData'
 import { GrantRoleData, Record } from './types'
 import { generateRandomInt } from '../helpers'
+import { assertCreateRecordEvent, assertGrantRoleEvent } from './helpers/assertEvents'
 
 describe('SftRolesRegistrySingleRole', async () => {
   let SftRolesRegistry: Contract
@@ -532,34 +533,16 @@ describe('SftRolesRegistrySingleRole', async () => {
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      RecordCreated = buildRecord({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
-      GrantRoleData = await buildGrantRole({
-        recordId: 1,
-        grantee: grantee.address,
-      })
-      await MockToken.mint(grantor.address, RecordCreated.tokenId, RecordCreated.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(
-        SftRolesRegistry.connect(grantor).createRecordFrom(
-          RecordCreated.grantor,
-          RecordCreated.tokenAddress,
-          RecordCreated.tokenId,
-          RecordCreated.tokenAmount,
-        ),
-      ).to.not.be.reverted
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.recordId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        ),
-      ).to.not.be.reverted
+      RecordCreated = await assertCreateRecordEvent(SftRolesRegistry, MockToken, grantor, 1)
+      GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
+    })
+
+    it('recordInfo', async () => {
+      const record = await SftRolesRegistry.recordInfo(GrantRoleData.recordId)
+      expect(record.grantor_).to.be.equal(RecordCreated.grantor)
+      expect(record.tokenAddress_).to.be.equal(RecordCreated.tokenAddress)
+      expect(record.tokenId_).to.be.equal(RecordCreated.tokenId)
+      expect(record.tokenAmount_).to.be.equal(RecordCreated.tokenAmount)
     })
 
     it('should revert when grantee is not the same', async () => {
@@ -617,7 +600,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should return true if IERCXXXX interface id', async () => {
-      expect(await SftRolesRegistry.supportsInterface('0x42ba720c')).to.be.true
+      expect(await SftRolesRegistry.supportsInterface('0xf254051c')).to.be.true
     })
   })
 })

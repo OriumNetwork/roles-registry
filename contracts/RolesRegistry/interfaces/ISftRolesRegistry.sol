@@ -6,7 +6,7 @@ import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol
 
 /// @title ERC-XXXX Semi-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-XXXX
-/// Note: the ERC-165 identifier for this interface is 0x42ba720c
+/// Note: the ERC-165 identifier for this interface is 0xf254051c
 interface ISftRolesRegistry is IERC165 {
     struct RoleAssignment {
         address grantee;
@@ -118,6 +118,16 @@ interface ISftRolesRegistry is IERC165 {
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external;
 
     /** View Functions **/
+
+    /// @notice Returns all the information regarding a record.
+    /// @param _recordId The record identifier.
+    /// @return grantor_ The record owner.
+    /// @return tokenAddress_ The token address.
+    /// @return tokenId_ The token identifier.
+    /// @return tokenAmount_ The token amount.
+    function recordInfo(
+        uint256 _recordId
+    ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_);
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _recordId The record identifier.

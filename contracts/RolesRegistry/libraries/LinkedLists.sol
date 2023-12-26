@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from '../interfaces/IERCXXXX.sol';
+import { ISftRolesRegistry } from '../interfaces/ISftRolesRegistry.sol';
 
 /// LinkedLists allow developers to manage multiple linked lists at once.
 /// all lists are identified by a head key (bytes32)
@@ -11,18 +11,26 @@ import { IERCXXXX } from '../interfaces/IERCXXXX.sol';
 library LinkedLists {
     uint256 public constant EMPTY = 0;
 
-    struct Lists {
-        mapping(bytes32 => uint256) heads;
-        mapping(uint256 => ListItem) items;
+    struct RoleData {
+        uint64 expirationDate;
+        bool revocable;
+        bytes data;
     }
 
     struct ListItem {
-        IERCXXXX.RoleData data;
+        RoleData data;
         uint256 previous;
         uint256 next;
     }
 
-    function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, IERCXXXX.RoleData memory _data) internal {
+    struct Lists {
+        // headKey => recordId
+        mapping(bytes32 => uint256) heads;
+        // hash(recordId, role, grantee) => item
+        mapping(uint256 => ListItem) items;
+    }
+
+    function insert(Lists storage _self, bytes32 _headKey, uint256 _nonce, RoleData memory _data) internal {
         require(_nonce != EMPTY, 'LinkedLists: invalid nonce');
 
         uint256 headNonce = _self.heads[_headKey];
@@ -61,7 +69,7 @@ library LinkedLists {
         Lists storage _self,
         uint256 _previousNonce,
         uint256 _dataNonce,
-        IERCXXXX.RoleData memory _data
+        RoleData memory _data
     ) internal {
         ListItem storage previousItem = _self.items[_previousNonce];
         if (previousItem.next == EMPTY) {

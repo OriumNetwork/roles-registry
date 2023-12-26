@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.9;
 
-import { IERCXXXX } from '../RolesRegistry/interfaces/IERCXXXX.sol';
 import { LinkedLists } from '../RolesRegistry/libraries/LinkedLists.sol';
 
 contract MockLinkedLists {
@@ -19,7 +18,7 @@ contract MockLinkedLists {
 
     function insert(bytes32 _headKey, uint256 _nonce, uint64 _expirationDate) external {
         // the only attribute that affects the list sorting is the expiration date
-        IERCXXXX.RoleData memory data = IERCXXXX.RoleData('', address(0), 1, _expirationDate, true, '');
+        LinkedLists.RoleData memory data = LinkedLists.RoleData(_expirationDate, true, '');
         lists.insert(_headKey, _nonce, data);
     }
 

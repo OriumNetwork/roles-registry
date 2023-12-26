@@ -1,6 +1,6 @@
 import { solidityKeccak256 } from 'ethers/lib/utils'
-import { GrantRoleData, Record, RevokeRoleData, RoleAssignment } from './types'
-import { generateRandomInt } from '../helpers'
+import { GrantRoleData, Record, RevokeRoleData, RoleAssignment } from '../types'
+import { generateRandomInt } from '../../helpers'
 import { ethers } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 

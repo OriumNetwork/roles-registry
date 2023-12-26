@@ -70,7 +70,9 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     function revokeRoleFrom(
-        uint256 _recordId, bytes32 _role, address _grantee
+        uint256 _recordId,
+        bytes32 _role,
+        address _grantee
     ) external override sameGrantee(_recordId, _role, _grantee) {
         RoleAssignment storage roleAssignment = roleAssignments[_recordId][_role];
         Record storage record = records[_recordId];
@@ -111,6 +113,16 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
     }
 
     /** View Functions **/
+
+    function recordInfo(
+        uint256 _recordId
+    ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_) {
+        Record memory record = records[_recordId];
+        grantor_ = record.grantor;
+        tokenAddress_ = record.tokenAddress;
+        tokenId_ = record.tokenId;
+        tokenAmount_ = record.tokenAmount;
+    }
 
     function roleData(
         uint256 _recordId,
@@ -186,12 +198,16 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         IERC1155(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, _tokenAmount, '');
     }
 
+    // careful with the following edge case:
+    // if grantee is approved by grantor, the first one checked is returned
+    // if grantor is returned instead of grantee, the grantee won't be able
+    // to revoke the role assignment before the expiration date
     function _findCaller(address _grantor, address _grantee, address _tokenAddress) internal view returns (address) {
-        if (_grantor == msg.sender || isRoleApprovedForAll(_tokenAddress, _grantor, msg.sender)) {
-            return _grantor;
-        }
         if (_grantee == msg.sender || isRoleApprovedForAll(_tokenAddress, _grantee, msg.sender)) {
             return _grantee;
+        }
+        if (_grantor == msg.sender || isRoleApprovedForAll(_tokenAddress, _grantor, msg.sender)) {
+            return _grantor;
         }
         revert('SftRolesRegistry: sender must be approved');
     }
