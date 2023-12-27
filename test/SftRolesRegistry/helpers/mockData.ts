@@ -4,6 +4,7 @@ import { generateRandomInt } from '../../helpers'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { ethers } from 'ethers'
 import { ISftRolesRegistry__factory } from '../../../typechain-types'
+import { ICommitTokensAndGrantRoleExtension__factory } from '../../../typechain-types'
 
 const { HashZero, AddressZero } = ethers.constants
 export const ONE_DAY = 60 * 60 * 24
@@ -79,8 +80,13 @@ export async function buildRoleAssignment({
 }
 
 export function getSftRolesRegistryInterfaceId() {
-  const interfaceI = ISftRolesRegistry__factory.createInterface()
-  return generateErc165InterfaceId(interfaceI)
+  const iface = ISftRolesRegistry__factory.createInterface()
+  return generateErc165InterfaceId(iface)
+}
+
+export function getCommitTokensAndGrantRoleInterfaceId() {
+  const iface = ICommitTokensAndGrantRoleExtension__factory.createInterface()
+  return generateErc165InterfaceId(iface)
 }
 
 function generateErc165InterfaceId(contractInterface: ethers.utils.Interface) {

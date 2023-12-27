@@ -13,6 +13,7 @@ import {
   buildCommitment,
   buildGrantRole,
   getSftRolesRegistryInterfaceId,
+  getCommitTokensAndGrantRoleInterfaceId,
 } from './helpers/mockData'
 
 const { AddressZero } = ethers.constants
@@ -412,6 +413,112 @@ describe('SftRolesRegistry', async () => {
     })
   })
 
+  describe('commitTokensAndGrantRole', async () => {
+    let CommitmentCreated: Commitment
+    let GrantRoleData: GrantRoleData
+
+    beforeEach(async () => {
+      CommitmentCreated = buildCommitment({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      GrantRoleData = await buildGrantRole({
+        commitmentId: 1,
+      })
+    })
+
+    it('should revert when sender is not grantor or approved', async () => {
+      await expect(
+        SftRolesRegistry.connect(anotherUser).commitTokensAndGrantRole(
+          CommitmentCreated.grantor,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: account not approved')
+    })
+
+    it('should revert when tokenAmount is zero', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+          CommitmentCreated.grantor,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          0,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: tokenAmount must be greater than zero')
+    })
+
+    it('should revert when expirationDate is not in the future', async () => {
+      await expect(
+        SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+          CommitmentCreated.grantor,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          await time.latest(),
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      ).to.be.revertedWith('SftRolesRegistry: expiration date must be in the future')
+    })
+
+    it('should commit tokens and grant role', async () => {
+      await MockToken.mint(grantor.address, CommitmentCreated.tokenId, CommitmentCreated.tokenAmount)
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+      await expect(
+        SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+          CommitmentCreated.grantor,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        ),
+      )
+        .to.emit(SftRolesRegistry, 'TokensCommitted')
+        .withArgs(
+          CommitmentCreated.grantor,
+          GrantRoleData.commitmentId,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
+        .to.emit(SftRolesRegistry, 'RoleGranted')
+        .withArgs(
+          GrantRoleData.commitmentId,
+          GrantRoleData.role,
+          GrantRoleData.grantee,
+          GrantRoleData.expirationDate,
+          GrantRoleData.revocable,
+          GrantRoleData.data,
+        )
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          CommitmentCreated.grantor,
+          SftRolesRegistry.address,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
+    })
+  })
+
   describe('View Functions', async () => {
     let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
@@ -476,6 +583,11 @@ describe('SftRolesRegistry', async () => {
 
     it('should return true if SftRolesRegistry interface id', async () => {
       const interfaceId = getSftRolesRegistryInterfaceId()
+      expect(await SftRolesRegistry.supportsInterface(interfaceId)).to.be.true
+    })
+
+    it('should return true if ICommitTokensAndGrantRoleExtension interface id', async () => {
+      const interfaceId = getCommitTokensAndGrantRoleInterfaceId()
       expect(await SftRolesRegistry.supportsInterface(interfaceId)).to.be.true
     })
   })
