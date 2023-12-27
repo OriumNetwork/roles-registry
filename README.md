@@ -7,21 +7,37 @@
 [![Discord](https://img.shields.io/discord/1009147970832322632?label=discord&logo=discord&logoColor=white)](https://discord.gg/NaNTgPK5rx)
 [![Twitter Follow](https://img.shields.io/twitter/follow/oriumnetwork?label=Follow&style=social)](https://twitter.com/OriumNetwork)
 
-This repository contains a minimal implementation of ERC-7432 (Non-Fungible Token Roles).
-ERC-7432 introduces role management for NFTs. Each role assignment is associated with a single NFT and expires automatically at a given timestamp.
+[comment]: <> (TODO: Add link and EIP number for ERC-1155 Roles Registry when available)
 
-ERC-7432 can be deeply integrated with dApps to create a utility-sharing mechanism. A good example is in digital real estate. A user can create a digital property NFT and grant a `keccak256("PROPERTY_MANAGER")` role to another user, allowing them to delegate specific utility without compromising ownership. The same user could also grant multiple `keccak256("PROPERTY_TENANT")` roles, allowing the grantees to access and interact with the digital property.
+This repository contains multiple implementations of two EIPs (Ethereum Improvement Proposals):
+* ERC-7432 (Non-Fungible Token Roles).
+* ERC-TBD (Semi-Fungible Token Roles).
 
-You can find the full specification [here](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7432.md).
+The goal of these EIPs is to introduce role management for NFTs. Each role assignment is associated with one or more
+NFTs and expire automatically at a given timestamp. Token Roles can be deeply integrated with dApps to create a
+utility-sharing mechanism. A good example is in digital real estate. A user can create a digital property NFT and grant
+a `keccak256("PROPERTY_MANAGER")` role to another user, allowing them to delegate specific utility without compromising
+ownership. The same user could also grant multiple `keccak256("PROPERTY_TENANT")` roles, allowing additional users to
+access the digital property.
 
-# Build
+You can find the full specification here: [ERC-721 Token Roles](https://eips.ethereum.org/EIPS/eip-7432) and
+[ERC-1155 Token Roles](TBD).
+
+## Implementations
+
+* [ERC-7432 NFT Roles Registry](./contracts/RolesRegistry.sol): ERC-721 NFT Owners can grant roles without depositing NFTs.
+* [ERC-TBD SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistry.sol): ERC-1155 NFT Owners can grant roles after depositing NFTs.
+* [ERC-TBD Single-Role SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistrySingleRole.sol): ERC-1155 NFT Owners can grant a single pre-defined role after depositing
+  NFTs.
+
+## Build
 
 ```bash
-npm install
+npm ci
 npm run build
 ```
 
-# Test
+## Test
 
 ```bash
 npm run test
