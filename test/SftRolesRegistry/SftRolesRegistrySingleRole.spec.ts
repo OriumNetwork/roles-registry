@@ -537,12 +537,24 @@ describe('SftRolesRegistrySingleRole', async () => {
       GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
-    it('commitmentInfo', async () => {
-      const commitment = await SftRolesRegistry.commitmentInfo(GrantRoleData.commitmentId)
-      expect(commitment.grantor_).to.be.equal(CommitmentCreated.grantor)
-      expect(commitment.tokenAddress_).to.be.equal(CommitmentCreated.tokenAddress)
-      expect(commitment.tokenId_).to.be.equal(CommitmentCreated.tokenId)
-      expect(commitment.tokenAmount_).to.be.equal(CommitmentCreated.tokenAmount)
+    it('grantorOf', async () => {
+      expect(await SftRolesRegistry.grantorOf(GrantRoleData.commitmentId)).to.be.equal(CommitmentCreated.grantor)
+    })
+
+    it('tokenAddressOf', async () => {
+      expect(await SftRolesRegistry.tokenAddressOf(GrantRoleData.commitmentId)).to.be.equal(
+        CommitmentCreated.tokenAddress,
+      )
+    })
+
+    it('tokenIdOf', async () => {
+      expect(await SftRolesRegistry.tokenIdOf(GrantRoleData.commitmentId)).to.be.equal(CommitmentCreated.tokenId)
+    })
+
+    it('tokenAmountOf', async () => {
+      expect(await SftRolesRegistry.tokenAmountOf(GrantRoleData.commitmentId)).to.be.equal(
+        CommitmentCreated.tokenAmount,
+      )
     })
 
     it('should revert when grantee is not the same', async () => {

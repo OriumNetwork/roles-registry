@@ -116,15 +116,25 @@ interface ISftRolesRegistry is IERC165 {
 
     /** View Functions **/
 
-    /// @notice Returns all information regarding a commitment.
+    /// @notice Returns the owner of the commitment (grantor).
     /// @param _commitmentId The commitment identifier.
     /// @return grantor_ The commitment owner.
+    function grantorOf(uint256 _commitmentId) external view returns (address grantor_);
+
+    /// @notice Returns the address of the token committed.
+    /// @param _commitmentId The commitment identifier.
     /// @return tokenAddress_ The token address.
+    function tokenAddressOf(uint256 _commitmentId) external view returns (address tokenAddress_);
+
+    /// @notice Returns the identifier of the token committed.
+    /// @param _commitmentId The commitment identifier.
     /// @return tokenId_ The token identifier.
+    function tokenIdOf(uint256 _commitmentId) external view returns (uint256 tokenId_);
+
+    /// @notice Returns the amount of tokens committed.
+    /// @param _commitmentId The commitment identifier.
     /// @return tokenAmount_ The token amount.
-    function commitmentInfo(
-        uint256 _commitmentId
-    ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_);
+    function tokenAmountOf(uint256 _commitmentId) external view returns (uint256 tokenAmount_);
 
     /// @notice Returns the custom data of a role assignment.
     /// @param _commitmentId The commitment identifier.

@@ -62,8 +62,8 @@ export async function assertGrantRoleEvent(
     revocable,
   })
   if (anotherUser) {
-    const commitment = await SftRolesRegistry.commitmentInfo(commitmentId)
-    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress_, anotherUser.address, true)
+    const tokenAddress = await SftRolesRegistry.tokenAddressOf(commitmentId)
+    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(tokenAddress, anotherUser.address, true)
   }
   await expect(
     SftRolesRegistry.connect(anotherUser || grantor).grantRole(
@@ -96,8 +96,8 @@ export async function assertRevokeRoleEvent(
   revoker?: SignerWithAddress,
 ) {
   if (revoker) {
-    const commitment = await SftRolesRegistry.commitmentInfo(commitmentId)
-    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress_, revoker.address, true)
+    const tokenAddress = await SftRolesRegistry.tokenAddressOf(commitmentId)
+    await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(tokenAddress, revoker.address, true)
   }
   await expect(SftRolesRegistry.connect(revoker || grantor).revokeRole(commitmentId, role, grantee.address))
     .to.emit(SftRolesRegistry, 'RoleRevoked')

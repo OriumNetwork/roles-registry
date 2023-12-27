@@ -118,14 +118,20 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
 
     /** View Functions **/
 
-    function commitmentInfo(
-        uint256 _commitmentId
-    ) external view returns (address grantor_, address tokenAddress_, uint256 tokenId_, uint256 tokenAmount_) {
-        Commitment memory commitment = commitments[_commitmentId];
-        grantor_ = commitment.grantor;
-        tokenAddress_ = commitment.tokenAddress;
-        tokenId_ = commitment.tokenId;
-        tokenAmount_ = commitment.tokenAmount;
+    function grantorOf(uint256 _commitmentId) external view returns (address grantor_) {
+        grantor_ = commitments[_commitmentId].grantor;
+    }
+
+    function tokenAddressOf(uint256 _commitmentId) external view returns (address tokenAddress_) {
+        tokenAddress_ = commitments[_commitmentId].tokenAddress;
+    }
+
+    function tokenIdOf(uint256 _commitmentId) external view returns (uint256 tokenId_) {
+        tokenId_ = commitments[_commitmentId].tokenId;
+    }
+
+    function tokenAmountOf(uint256 _commitmentId) external view returns (uint256 tokenAmount_) {
+        tokenAmount_ = commitments[_commitmentId].tokenAmount;
     }
 
     function roleData(
