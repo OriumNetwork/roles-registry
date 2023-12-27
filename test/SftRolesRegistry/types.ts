@@ -15,7 +15,7 @@ export interface GrantRoleData {
 }
 
 export interface RoleAssignment {
-  nonce: number
+  itemId: number
   role: string
   tokenAddress: string
   tokenId: number
@@ -28,7 +28,7 @@ export interface RoleAssignment {
 }
 
 export interface RevokeRoleData {
-  nonce: number
+  itemId: number
   role: string
   tokenAddress: string
   tokenId: number

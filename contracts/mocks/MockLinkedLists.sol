@@ -26,7 +26,7 @@ contract MockLinkedLists {
         lists.remove(_headKey, _commitmentId);
     }
 
-    function getHeadNonce(bytes32 _headKey) external view returns (uint256) {
+    function getHeadItemId(bytes32 _headKey) external view returns (uint256) {
         return lists.heads[_headKey];
     }
 

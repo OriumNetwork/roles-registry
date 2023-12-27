@@ -8,16 +8,16 @@ import { expect } from 'chai'
  * @param expectedLength The number of items expected in the list
  */
 export async function assertList(LinkedLists: Contract, listId: string, expectedLength: number) {
-  const headNonce = await LinkedLists.getHeadNonce(listId)
-  if (headNonce.toNumber() === 0) {
+  const headItemId = await LinkedLists.getHeadItemId(listId)
+  if (headItemId.toNumber() === 0) {
     return expect(expectedLength, 'List is empty, head should be zero').to.be.equal(0)
   }
 
   // assert head
-  let item = await LinkedLists.getListItem(headNonce)
+  let item = await LinkedLists.getListItem(headItemId)
   expect(item.previous, 'Head previous should be zero').to.be.equal(0)
 
-  let previous = headNonce.toNumber()
+  let previous = headItemId.toNumber()
   let previousExpirationDate = item.expirationDate.toNumber()
   let next = item.next.toNumber()
   let listLength = 1
@@ -46,28 +46,28 @@ export async function assertList(LinkedLists: Contract, listId: string, expected
 }
 
 /**
- * Validates the item nonce, expiration date, and position in the list
+ * Validates the item itemId, expiration date, and position in the list
  * @param LinkedLists The MockLinkedLists contract
  * @param listId The bytes32 identifier of the list
- * @param itemNonce The nonce of the item
+ * @param itemId The itemId of the item
  * @param itemExpirationDate The expiration date of the item
  * @param expectedPosition The expected position of the item in the list
  */
 export async function assertListItem(
   LinkedLists: Contract,
   listId: string,
-  itemNonce: number,
+  itemId: number,
   itemExpirationDate: number,
   expectedPosition: number,
 ) {
-  const { expirationDate, previous } = await LinkedLists.getListItem(itemNonce)
-  expect(expirationDate, `Item ${itemNonce} expiration date is not ${itemExpirationDate}`).to.be.equal(
+  const { expirationDate, previous } = await LinkedLists.getListItem(itemId)
+  expect(expirationDate, `Item ${itemId} expiration date is not ${itemExpirationDate}`).to.be.equal(
     itemExpirationDate,
   )
 
   if (expectedPosition === 0) {
     // if item is the head
-    expect(await LinkedLists.getHeadNonce(listId), `Item ${itemNonce} should be the head`).to.equal(itemNonce)
+    expect(await LinkedLists.getHeadItemId(listId), `Item ${itemId} should be the head`).to.equal(itemId)
     return expect(previous, 'Head previous should be zero').to.be.equal(0)
   }
 
@@ -76,14 +76,14 @@ export async function assertListItem(
 
   // assert position
   let position = 0
-  let currentNonce = (await LinkedLists.getHeadNonce(listId)).toNumber()
+  let currentItem = (await LinkedLists.getHeadItemId(listId)).toNumber()
   let item = await LinkedLists.getListHead(listId)
-  while (currentNonce !== 0) {
-    if (currentNonce === itemNonce) {
+  while (currentItem !== 0) {
+    if (currentItem === itemId) {
       return expect(position, 'Item is not on expected position').to.be.equal(expectedPosition)
     }
-    item = await LinkedLists.getListItem(currentNonce)
-    currentNonce = item.next.toNumber()
+    item = await LinkedLists.getListItem(currentItem)
+    currentItem = item.next.toNumber()
     position += 1
   }
   expect.fail('Item not found in list')
@@ -91,22 +91,22 @@ export async function assertListItem(
 
 export async function printList(LinkedLists: Contract, listId: string) {
   console.log('\n== List ==============================================')
-  const headNonce = (await LinkedLists.getHeadNonce(listId)).toNumber()
-  if (headNonce === 0) {
+  const headItemId = (await LinkedLists.getHeadItemId(listId)).toNumber()
+  if (headItemId === 0) {
     console.log('\tList is empty!')
     return console.log('== End of List =======================================\n')
   }
 
   let position = 0
-  let currentNonce = headNonce
-  while (currentNonce !== 0) {
-    const currentItem = await LinkedLists.getListItem(currentNonce)
+  let currentItemId = headItemId
+  while (currentItemId !== 0) {
+    const currentItem = await LinkedLists.getListItem(currentItemId)
     console.log(`\n\tItem ${position}:`)
-    console.log(`\t\tNonce: ${currentNonce}`)
+    console.log(`\t\tItemId: ${currentItem}`)
     console.log(`\t\tExpiration Date: ${currentItem.expirationDate}`)
     console.log(`\t\tPrevious: ${currentItem.previous.toNumber()}`)
     console.log(`\t\tNext: ${currentItem.next.toNumber()}`)
-    currentNonce = currentItem.next.toNumber()
+    currentItemId = currentItem.next.toNumber()
     position += 1
   }
 

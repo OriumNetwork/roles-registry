@@ -43,7 +43,7 @@ export function generateRoleId(role: string) {
 
 export async function buildRoleAssignment({
   // default values
-  nonce = generateRandomInt(),
+  itemId = generateRandomInt(),
   role = 'UNIQUE_ROLE',
   tokenAddress = AddressZero,
   tokenId = generateRandomInt(),
@@ -55,7 +55,7 @@ export async function buildRoleAssignment({
   data = HashZero,
 }: {
   // types
-  nonce?: number
+  itemId?: number
   role?: string
   tokenAddress?: string
   tokenId?: number
@@ -67,7 +67,7 @@ export async function buildRoleAssignment({
   data?: string
 } = {}): Promise<RoleAssignment> {
   return {
-    nonce,
+    itemId,
     role: generateRoleId(role),
     tokenAddress,
     tokenId,
