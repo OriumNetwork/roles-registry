@@ -7,7 +7,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { generateRoleId, buildCommitment, buildGrantRole, getSftRolesRegistryInterfaceId } from './helpers/mockData'
 import { GrantRoleData, Commitment } from './types'
 import { generateRandomInt } from '../helpers'
-import { assertCreateCommitmentEvent, assertGrantRoleEvent } from './helpers/assertEvents'
+import { assertCreateCommitmentEvent, assertGrantRoleEvent, assertRevokeRoleEvent } from './helpers/assertEvents'
 
 describe('SftRolesRegistrySingleRole', async () => {
   let SftRolesRegistry: Contract
@@ -115,84 +115,23 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should create commitment when sender is grantor', async () => {
-      const commitment = buildCommitment({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
-      await MockToken.mint(grantor.address, commitment.tokenId, commitment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(
-        SftRolesRegistry.connect(grantor).commitTokens(
-          commitment.grantor,
-          commitment.tokenAddress,
-          commitment.tokenId,
-          commitment.tokenAmount,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'TokensCommitted')
-        .withArgs(commitment.grantor, 1, commitment.tokenAddress, commitment.tokenId, commitment.tokenAmount)
-        .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.address,
-          grantor.address,
-          SftRolesRegistry.address,
-          commitment.tokenId,
-          commitment.tokenAmount,
-        )
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
     })
 
     it('should create commitment when sender is approved', async () => {
-      const commitment = buildCommitment({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
-      await MockToken.mint(grantor.address, commitment.tokenId, commitment.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(commitment.tokenAddress, anotherUser.address, true)
-      await expect(
-        SftRolesRegistry.connect(anotherUser).commitTokens(
-          commitment.grantor,
-          commitment.tokenAddress,
-          commitment.tokenId,
-          commitment.tokenAmount,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'TokensCommitted')
-        .withArgs(commitment.grantor, 1, commitment.tokenAddress, commitment.tokenId, commitment.tokenAmount)
-        .to.emit(MockToken, 'TransferSingle')
-        .withArgs(
-          SftRolesRegistry.address,
-          grantor.address,
-          SftRolesRegistry.address,
-          commitment.tokenId,
-          commitment.tokenAmount,
-        )
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1, anotherUser)
     })
   })
 
   describe('grantRole', async () => {
-    let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      CommitmentCreated = buildCommitment({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
+      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await buildGrantRole({
         commitmentId: 1,
         grantee: grantee.address,
       })
-      await MockToken.mint(grantor.address, CommitmentCreated.tokenId, CommitmentCreated.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(
-        SftRolesRegistry.connect(grantor).commitTokens(
-          CommitmentCreated.grantor,
-          CommitmentCreated.tokenAddress,
-          CommitmentCreated.tokenId,
-          CommitmentCreated.tokenAmount,
-        ),
-      ).to.not.be.reverted
     })
 
     it('should revert when sender is not grantor or approved', async () => {
@@ -235,52 +174,18 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should grant role when sender is grantor', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleGranted')
-        .withArgs(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        )
+      await assertGrantRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.grantee)
     })
 
     it('should grant role when sender is approved', async () => {
-      await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
-        CommitmentCreated.tokenAddress,
-        anotherUser.address,
+      await assertGrantRoleEvent(
+        SftRolesRegistry,
+        grantor,
+        GrantRoleData.commitmentId,
+        GrantRoleData.grantee,
         true,
+        anotherUser,
       )
-      await expect(
-        SftRolesRegistry.connect(anotherUser).grantRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleGranted')
-        .withArgs(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        )
     })
   })
 
@@ -289,34 +194,8 @@ describe('SftRolesRegistrySingleRole', async () => {
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      CommitmentCreated = buildCommitment({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
-      GrantRoleData = await buildGrantRole({
-        commitmentId: 1,
-        grantee: grantee.address,
-      })
-      await MockToken.mint(grantor.address, CommitmentCreated.tokenId, CommitmentCreated.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(
-        SftRolesRegistry.connect(grantor).commitTokens(
-          CommitmentCreated.grantor,
-          CommitmentCreated.tokenAddress,
-          CommitmentCreated.tokenId,
-          CommitmentCreated.tokenAmount,
-        ),
-      ).to.not.be.reverted
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
-          GrantRoleData.data,
-        ),
-      ).to.not.be.reverted
+      CommitmentCreated = await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
+      GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
     it('should revert when sender is not grantor or approved', async () => {
@@ -366,50 +245,25 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should revoke role when sender is grantee, and role is not expired nor revocable', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).grantRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-          GrantRoleData.expirationDate,
-          false,
-          GrantRoleData.data,
-        ),
-      ).to.not.be.reverted
-
-      await expect(
-        SftRolesRegistry.connect(grantee).revokeRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-        ),
+      const roleAssignment = await assertGrantRoleEvent(
+        SftRolesRegistry,
+        grantor,
+        GrantRoleData.commitmentId,
+        grantee.address,
+        false,
       )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, GrantRoleData.grantee)
+      await assertRevokeRoleEvent(
+        SftRolesRegistry,
+        grantor,
+        roleAssignment.commitmentId,
+        roleAssignment.role,
+        grantee,
+        grantee,
+      )
     })
 
     it('should revoke role when sender is grantor', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantor).revokeRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, GrantRoleData.grantee)
-    })
-
-    it('should revoke role when sender is grantee', async () => {
-      await expect(
-        SftRolesRegistry.connect(grantee).revokeRole(
-          GrantRoleData.commitmentId,
-          GrantRoleData.role,
-          GrantRoleData.grantee,
-        ),
-      )
-        .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, GrantRoleData.grantee)
+      await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
     })
 
     it('should revoke role when sender is approved by grantor', async () => {
@@ -422,11 +276,11 @@ describe('SftRolesRegistrySingleRole', async () => {
         SftRolesRegistry.connect(anotherUser).revokeRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
-          GrantRoleData.grantee,
+          grantee.address,
         ),
       )
         .to.emit(SftRolesRegistry, 'RoleRevoked')
-        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, GrantRoleData.grantee)
+        .withArgs(GrantRoleData.commitmentId, GrantRoleData.role, grantee.address)
     })
 
     it('should revoke role when sender is approved by grantee', async () => {
@@ -452,24 +306,8 @@ describe('SftRolesRegistrySingleRole', async () => {
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      CommitmentCreated = buildCommitment({
-        grantor: grantor.address,
-        tokenAddress: MockToken.address,
-      })
-      GrantRoleData = await buildGrantRole({
-        commitmentId: 1,
-        grantee: grantee.address,
-      })
-      await MockToken.mint(grantor.address, CommitmentCreated.tokenId, CommitmentCreated.tokenAmount)
-      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
-      await expect(
-        SftRolesRegistry.connect(grantor).commitTokens(
-          CommitmentCreated.grantor,
-          CommitmentCreated.tokenAddress,
-          CommitmentCreated.tokenId,
-          CommitmentCreated.tokenAmount,
-        ),
-      ).to.not.be.reverted
+      CommitmentCreated = await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
+      GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
     it('should revert when sender is not grantor or approved', async () => {
@@ -478,23 +316,23 @@ describe('SftRolesRegistrySingleRole', async () => {
       )
     })
 
-    it('should revert when commitment has an active role', async () => {
+    it('should revert when commitment has an active non-revocable role', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRole(
           GrantRoleData.commitmentId,
           GrantRoleData.role,
           GrantRoleData.grantee,
           GrantRoleData.expirationDate,
-          GrantRoleData.revocable,
+          false,
           GrantRoleData.data,
         ),
       ).to.not.be.reverted
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
-        'SftRolesRegistry: token has an active role',
+        'SftRolesRegistry: commitment has an active non-revocable role',
       )
     })
 
-    it('should withdrawNfts tokens when sender is grantor', async () => {
+    it('should withdraw tokens when sender is grantor', async () => {
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'NftsWithdrawn')
         .withArgs(GrantRoleData.commitmentId)
@@ -508,7 +346,7 @@ describe('SftRolesRegistrySingleRole', async () => {
         )
     })
 
-    it('should withdrawNfts tokens when sender is approved', async () => {
+    it('should withdraw tokens when sender is approved', async () => {
       await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
         CommitmentCreated.tokenAddress,
         anotherUser.address,

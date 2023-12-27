@@ -93,8 +93,9 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder {
         uint256 _commitmentId
     ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         require(
-            roleAssignments[_commitmentId][UNIQUE_ROLE].expirationDate < block.timestamp,
-            'SftRolesRegistry: token has an active role'
+            roleAssignments[_commitmentId][UNIQUE_ROLE].expirationDate < block.timestamp ||
+                roleAssignments[_commitmentId][UNIQUE_ROLE].revocable,
+            'SftRolesRegistry: commitment has an active non-revocable role'
         );
 
         delete roleAssignments[_commitmentId][UNIQUE_ROLE];

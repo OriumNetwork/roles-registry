@@ -7,7 +7,7 @@ export async function assertCreateCommitmentEvent(
   SftRolesRegistry: Contract,
   MockToken: Contract,
   grantor: SignerWithAddress,
-  expectedcommitmentId: number,
+  expectedCommitmentId: number,
   anotherUser?: SignerWithAddress,
 ) {
   const commitment = buildCommitment({
@@ -32,7 +32,7 @@ export async function assertCreateCommitmentEvent(
     .to.emit(SftRolesRegistry, 'TokensCommitted')
     .withArgs(
       commitment.grantor,
-      expectedcommitmentId,
+      expectedCommitmentId,
       commitment.tokenAddress,
       commitment.tokenId,
       commitment.tokenAmount,
@@ -45,7 +45,7 @@ export async function assertCreateCommitmentEvent(
       commitment.tokenId,
       commitment.tokenAmount,
     )
-  return { ...commitment, commitmentId: expectedcommitmentId }
+  return { ...commitment, commitmentId: expectedCommitmentId }
 }
 
 export async function assertGrantRoleEvent(

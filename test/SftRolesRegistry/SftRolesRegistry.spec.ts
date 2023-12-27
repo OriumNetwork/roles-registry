@@ -279,7 +279,7 @@ describe('SftRolesRegistry', async () => {
       await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
     })
 
-    it('should revoke when sender is grantee', async () => {
+    it('should revoke when sender is grantee, and role is not expired nor revocable', async () => {
       const roleAssignment = await assertGrantRoleEvent(
         SftRolesRegistry,
         grantor,
@@ -335,10 +335,11 @@ describe('SftRolesRegistry', async () => {
   })
 
   describe('withdrawNfts', async () => {
+    let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
     beforeEach(async () => {
-      await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
+      CommitmentCreated = await assertCreateCommitmentEvent(SftRolesRegistry, MockToken, grantor, 1)
       GrantRoleData = await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address)
     })
 
@@ -351,29 +352,53 @@ describe('SftRolesRegistry', async () => {
     it('should revert when there is an active role', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
-        'SftRolesRegistry: role is not expired and is not revocable',
+        'SftRolesRegistry: commitment has an active non-revocable role',
       )
     })
 
-    it('should withdrawNfts when there are revocable roles', async () => {
+    it('should withdraw when there are revocable roles', async () => {
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'NftsWithdrawn')
         .withArgs(GrantRoleData.commitmentId)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
     })
 
-    it('should withdrawNfts when there are no roles', async () => {
+    it('should withdraw when there are no roles', async () => {
       await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'NftsWithdrawn')
         .withArgs(GrantRoleData.commitmentId)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
     })
 
-    it('should withdrawNfts when there are expired roles', async () => {
+    it('should withdraw when there are expired roles', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
       await time.increase(ONE_DAY)
       await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'NftsWithdrawn')
         .withArgs(GrantRoleData.commitmentId)
+        .to.emit(MockToken, 'TransferSingle')
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
     })
   })
 

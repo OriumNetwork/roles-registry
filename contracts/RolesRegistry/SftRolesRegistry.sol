@@ -104,7 +104,7 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder {
             LinkedLists.RoleData storage data = lists.items[itemId].data;
             require(
                 data.expirationDate < block.timestamp || data.revocable,
-                'SftRolesRegistry: role is not expired and is not revocable'
+                'SftRolesRegistry: commitment has an active non-revocable role'
             );
 
             // remove from list and storage
