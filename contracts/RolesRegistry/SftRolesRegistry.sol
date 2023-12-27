@@ -3,6 +3,7 @@
 pragma solidity 0.8.9;
 
 import { ISftRolesRegistry } from './interfaces/ISftRolesRegistry.sol';
+import { IRoleBalanceOfExtension } from './interfaces/IRoleBalanceOfExtension.sol';
 import { ICommitTokensAndGrantRoleExtension } from './interfaces/ICommitTokensAndGrantRoleExtension.sol';
 import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 import { IERC1155 } from '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
@@ -13,7 +14,12 @@ import { LinkedLists } from './libraries/LinkedLists.sol';
 import { EnumerableSet } from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 // Semi-fungible token (SFT) roles registry
-contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder, ICommitTokensAndGrantRoleExtension {
+contract SftRolesRegistry is
+    ISftRolesRegistry,
+    ERC1155Holder,
+    ICommitTokensAndGrantRoleExtension,
+    IRoleBalanceOfExtension
+{
     using LinkedLists for LinkedLists.Lists;
     using LinkedLists for LinkedLists.ListItem;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -156,6 +162,28 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder, ICommitTokensAndG
         _grantOrUpdateRole(commitmentId_, _role, _grantee, _expirationDate, _revocable, _data);
     }
 
+    function roleBalanceOf(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantee
+    ) external view returns (uint256 balance_) {
+        bytes32 headKey = _getHeadKey(_grantee, _role, _tokenAddress, _tokenId);
+        uint256 currentItemId = lists.heads[headKey];
+
+        balance_ = 0;
+        LinkedLists.ListItem storage currentItem;
+        while (currentItemId != 0) {
+            currentItem = lists.items[currentItemId];
+            if (currentItem.data.expirationDate < block.timestamp) {
+                return balance_;
+            }
+            uint256 commitmentId = currentItem.data.commitmentId;
+            balance_ += commitments[commitmentId].tokenAmount;
+            currentItemId = currentItem.next;
+        }
+    }
+
     /** View Functions **/
 
     function grantorOf(uint256 _commitmentId) external view returns (address grantor_) {
@@ -206,37 +234,14 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder, ICommitTokensAndG
         return roleApprovals[_grantor][_tokenAddress][_operator];
     }
 
-    /*function roleBalanceOf(
-        bytes32 _role,
-        address _tokenAddress,
-        uint256 _tokenId,
-        address _grantee
-    ) external view returns (uint256 balance_) {
-        bytes32 headKey = _getHeadKey(_grantee, _role, _tokenAddress, _tokenId);
-        uint256 currentNonce = lists.heads[headKey];
-        if (currentNonce == 0) {
-            return 0;
-        }
-
-        balance_ = 0;
-        LinkedLists.ListItem storage currentItem;
-        while (currentNonce != 0) {
-            currentItem = lists.items[currentNonce];
-            if (currentItem.data.expirationDate < block.timestamp) {
-                return balance_;
-            }
-            balance_ += currentItem.data.tokenAmount;
-            currentNonce = currentItem.next;
-        }
-    }*/
-
     function supportsInterface(
         bytes4 interfaceId
     ) public view virtual override(ERC1155Receiver, IERC165) returns (bool) {
         return
             interfaceId == type(ISftRolesRegistry).interfaceId ||
             interfaceId == type(IERC1155Receiver).interfaceId ||
-            interfaceId == type(ICommitTokensAndGrantRoleExtension).interfaceId;
+            interfaceId == type(ICommitTokensAndGrantRoleExtension).interfaceId ||
+            interfaceId == type(IRoleBalanceOfExtension).interfaceId;
     }
 
     /** Helper Functions **/
@@ -295,7 +300,7 @@ contract SftRolesRegistry is ISftRolesRegistry, ERC1155Holder, ICommitTokensAndG
             commitments[_commitmentId].tokenAddress,
             commitments[_commitmentId].tokenId
         );
-        LinkedLists.RoleData memory data = LinkedLists.RoleData(_expirationDate, _revocable, _data);
+        LinkedLists.RoleData memory data = LinkedLists.RoleData(_commitmentId, _expirationDate, _revocable, _data);
         uint256 itemId = _getItemId(_commitmentId, _role, _grantee);
         lists.insert(headKey, itemId, data);
     }

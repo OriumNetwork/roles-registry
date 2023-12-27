@@ -12,6 +12,7 @@ library LinkedLists {
     uint256 public constant EMPTY = 0;
 
     struct RoleData {
+        uint256 commitmentId;
         uint64 expirationDate;
         bool revocable;
         bytes data;
@@ -24,7 +25,7 @@ library LinkedLists {
     }
 
     struct Lists {
-        // headKey => commitmentId
+        // headKey => itemId
         mapping(bytes32 => uint256) heads;
         // hash(commitmentId, role, grantee) => item
         mapping(uint256 => ListItem) items;

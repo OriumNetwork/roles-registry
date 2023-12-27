@@ -5,6 +5,7 @@ import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { ethers } from 'ethers'
 import { ISftRolesRegistry__factory } from '../../../typechain-types'
 import { ICommitTokensAndGrantRoleExtension__factory } from '../../../typechain-types'
+import { IRoleBalanceOfExtension__factory } from '../../../typechain-types'
 
 const { HashZero, AddressZero } = ethers.constants
 export const ONE_DAY = 60 * 60 * 24
@@ -86,6 +87,11 @@ export function getSftRolesRegistryInterfaceId() {
 
 export function getCommitTokensAndGrantRoleInterfaceId() {
   const iface = ICommitTokensAndGrantRoleExtension__factory.createInterface()
+  return generateErc165InterfaceId(iface)
+}
+
+export function getRoleBalanceOfInterfaceId() {
+  const iface = IRoleBalanceOfExtension__factory.createInterface()
   return generateErc165InterfaceId(iface)
 }
 

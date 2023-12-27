@@ -14,6 +14,7 @@ import {
   buildGrantRole,
   getSftRolesRegistryInterfaceId,
   getCommitTokensAndGrantRoleInterfaceId,
+  getRoleBalanceOfInterfaceId,
 } from './helpers/mockData'
 
 const { AddressZero } = ethers.constants
@@ -519,6 +520,253 @@ describe('SftRolesRegistry', async () => {
     })
   })
 
+  describe('roleBalanceOf', async () => {
+    let CommitmentCreated: Commitment
+    let GrantRoleData: GrantRoleData
+
+    beforeEach(async () => {
+      CommitmentCreated = buildCommitment({
+        grantor: grantor.address,
+        tokenAddress: MockToken.address,
+      })
+      GrantRoleData = await buildGrantRole({
+        commitmentId: 1,
+      })
+      await MockToken.connect(grantor).setApprovalForAll(SftRolesRegistry.address, true)
+    })
+
+    it('should return balance zero if grantee has no roles', async () => {
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(0)
+    })
+
+    it('should add balance to three grantees', async () => {
+      const roles = [grantee.address, anotherUser.address, grantor.address].map(g => ({
+        grantee: g,
+        tokenAmount: generateRandomInt(),
+      }))
+
+      const totalTokenAmount = roles.map(r => r.tokenAmount).reduce((a, b) => a + b, 0)
+      await MockToken.connect(grantor).mint(grantor.address, CommitmentCreated.tokenId, totalTokenAmount)
+
+      for (const role of roles) {
+        // make sure initial balance of grantee is zero
+        expect(
+          await SftRolesRegistry.roleBalanceOf(
+            GrantRoleData.role,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.grantee,
+          ),
+        ).to.be.equal(0)
+
+        // grant role
+        await expect(
+          SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+            CommitmentCreated.grantor,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.tokenAmount,
+            GrantRoleData.role,
+            role.grantee,
+            GrantRoleData.expirationDate,
+            GrantRoleData.revocable,
+            GrantRoleData.data,
+          ),
+        ).to.not.be.reverted
+
+        // confirm that the balance increased
+        expect(
+          await SftRolesRegistry.roleBalanceOf(
+            GrantRoleData.role,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.grantee,
+          ),
+        ).to.be.equal(role.tokenAmount)
+      }
+    })
+
+    it('should grant 10 roles, then revoke them, withdraw and wait for them to expire', async () => {
+      const currentDate = await time.latest()
+      const roles = Array(10)
+        .fill(0)
+        .map((v, index) => ({
+          tokenAmount: generateRandomInt(),
+          expirationDate: currentDate + (index + 1) * ONE_DAY,
+        }))
+      const totalTokenAmount = roles.map(r => r.tokenAmount).reduce((a, b) => a + b, 0)
+      await MockToken.connect(grantor).mint(grantor.address, CommitmentCreated.tokenId, totalTokenAmount)
+
+      // make sure initial balance of grantee is zero
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(0)
+
+      for (const role of roles) {
+        await expect(
+          SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+            CommitmentCreated.grantor,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.tokenAmount,
+            GrantRoleData.role,
+            GrantRoleData.grantee,
+            role.expirationDate,
+            GrantRoleData.revocable,
+            GrantRoleData.data,
+          ),
+        ).to.not.be.reverted
+      }
+
+      // check if correctly summed tokenAmount
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(totalTokenAmount)
+
+      // revoke the first role
+      await expect(SftRolesRegistry.connect(grantor).revokeRole(1, GrantRoleData.role, GrantRoleData.grantee)).to.not.be
+        .reverted
+
+      // revoke the last role
+      await expect(
+        SftRolesRegistry.connect(grantor).revokeRole(roles.length, GrantRoleData.role, GrantRoleData.grantee),
+      ).to.not.be.reverted
+
+      // check if correctly summed leftovers
+      let leftoverTokenAmount = roles
+        .slice(1, roles.length - 1)
+        .map(r => r.tokenAmount)
+        .reduce((a, b) => a + b, 0)
+
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(leftoverTokenAmount)
+
+      // expire second and third role
+      leftoverTokenAmount = roles
+        .slice(3, roles.length - 1)
+        .map(r => r.tokenAmount)
+        .reduce((a, b) => a + b, 0)
+
+      await time.increase(ONE_DAY * 3)
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(leftoverTokenAmount)
+
+      // withdraw commitment
+      for (let i = 1; i < roles.length + 1; i++) {
+        await expect(SftRolesRegistry.connect(grantor).withdrawNfts(i)).to.not.be.reverted
+      }
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(0)
+    })
+
+    it('should grant 1,000 roles and sum them up @skip-on-coverage', async () => {
+      const currentDate = await time.latest()
+      const roles = Array(1000)
+        .fill(0)
+        .map((v, index) => ({
+          tokenAmount: generateRandomInt(),
+          expirationDate: currentDate + (1000 - index) * ONE_DAY,
+        }))
+      const totalTokenAmount = roles.map(r => r.tokenAmount).reduce((a, b) => a + b, 0)
+      await MockToken.connect(grantor).mint(grantor.address, CommitmentCreated.tokenId, totalTokenAmount)
+
+      for (const role of roles) {
+        await expect(
+          SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+            CommitmentCreated.grantor,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.tokenAmount,
+            GrantRoleData.role,
+            GrantRoleData.grantee,
+            role.expirationDate,
+            GrantRoleData.revocable,
+            GrantRoleData.data,
+          ),
+        ).to.not.be.reverted
+      }
+
+      // check if correctly summed tokenAmount
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(totalTokenAmount)
+    })
+
+    it('should grant three roles inserting the last one in the middle of the list', async () => {
+      const currentDate = await time.latest()
+      const roles = [currentDate + ONE_DAY, currentDate + 3 * ONE_DAY, currentDate + 2 * ONE_DAY].map(
+        expirationDate => ({ expirationDate, tokenAmount: generateRandomInt() }),
+      )
+      const totalTokenAmount = roles.map(r => r.tokenAmount).reduce((a, b) => a + b, 0)
+      await MockToken.connect(grantor).mint(grantor.address, CommitmentCreated.tokenId, totalTokenAmount)
+
+      for (const role of roles) {
+        await expect(
+          SftRolesRegistry.connect(grantor).commitTokensAndGrantRole(
+            CommitmentCreated.grantor,
+            CommitmentCreated.tokenAddress,
+            CommitmentCreated.tokenId,
+            role.tokenAmount,
+            GrantRoleData.role,
+            GrantRoleData.grantee,
+            role.expirationDate,
+            GrantRoleData.revocable,
+            GrantRoleData.data,
+          ),
+        ).to.not.be.reverted
+      }
+
+      expect(
+        await SftRolesRegistry.roleBalanceOf(
+          GrantRoleData.role,
+          CommitmentCreated.tokenAddress,
+          CommitmentCreated.tokenId,
+          GrantRoleData.grantee,
+        ),
+      ).to.be.equal(totalTokenAmount)
+    })
+  })
+
   describe('View Functions', async () => {
     let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
@@ -588,6 +836,11 @@ describe('SftRolesRegistry', async () => {
 
     it('should return true if ICommitTokensAndGrantRoleExtension interface id', async () => {
       const interfaceId = getCommitTokensAndGrantRoleInterfaceId()
+      expect(await SftRolesRegistry.supportsInterface(interfaceId)).to.be.true
+    })
+
+    it('should return true if IRoleBalanceOfExtension interface id', async () => {
+      const interfaceId = getRoleBalanceOfInterfaceId()
       expect(await SftRolesRegistry.supportsInterface(interfaceId)).to.be.true
     })
   })
