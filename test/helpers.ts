@@ -61,9 +61,7 @@ export async function assertListItem(
   expectedPosition: number,
 ) {
   const { expirationDate, previous } = await LinkedLists.getListItem(itemId)
-  expect(expirationDate, `Item ${itemId} expiration date is not ${itemExpirationDate}`).to.be.equal(
-    itemExpirationDate,
-  )
+  expect(expirationDate, `Item ${itemId} expiration date is not ${itemExpirationDate}`).to.be.equal(itemExpirationDate)
 
   if (expectedPosition === 0) {
     // if item is the head
