@@ -90,7 +90,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder, ICommit
         delete roleAssignments[_commitmentId][_role];
     }
 
-    function withdrawNfts(
+    function releaseTokens(
         uint256 _commitmentId
     ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         require(
@@ -110,7 +110,7 @@ contract SftRolesRegistrySingleRole is ISftRolesRegistry, ERC1155Holder, ICommit
         );
 
         delete commitments[_commitmentId];
-        emit NftsWithdrawn(_commitmentId);
+        emit TokensReleased(_commitmentId);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {

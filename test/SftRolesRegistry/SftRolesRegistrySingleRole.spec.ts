@@ -308,7 +308,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
   })
 
-  describe('withdrawNfts', async () => {
+  describe('releaseTokens', async () => {
     let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
@@ -318,7 +318,7 @@ describe('SftRolesRegistrySingleRole', async () => {
     })
 
     it('should revert when sender is not grantor or approved', async () => {
-      await expect(SftRolesRegistry.connect(anotherUser).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(anotherUser).releaseTokens(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: account not approved',
       )
     })
@@ -334,12 +334,12 @@ describe('SftRolesRegistrySingleRole', async () => {
           GrantRoleData.data,
         ),
       ).to.not.be.reverted
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: commitment has an active non-revocable role',
       )
     })
 
-    it('should withdraw when role has an expired non-revocable role', async () => {
+    it('should release when role has an expired non-revocable role', async () => {
       await expect(
         SftRolesRegistry.connect(grantor).grantRole(
           GrantRoleData.commitmentId,
@@ -351,8 +351,8 @@ describe('SftRolesRegistrySingleRole', async () => {
         ),
       ).to.not.be.reverted
       await time.increase(ONE_DAY)
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
@@ -364,9 +364,9 @@ describe('SftRolesRegistrySingleRole', async () => {
         )
     })
 
-    it('should withdraw tokens when sender is grantor', async () => {
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+    it('should release tokens when sender is grantor', async () => {
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
@@ -378,14 +378,14 @@ describe('SftRolesRegistrySingleRole', async () => {
         )
     })
 
-    it('should withdraw tokens when sender is approved', async () => {
+    it('should release tokens when sender is approved', async () => {
       await SftRolesRegistry.connect(grantor).setRoleApprovalForAll(
         CommitmentCreated.tokenAddress,
         anotherUser.address,
         true,
       )
-      await expect(SftRolesRegistry.connect(anotherUser).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+      await expect(SftRolesRegistry.connect(anotherUser).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(

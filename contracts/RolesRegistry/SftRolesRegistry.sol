@@ -99,7 +99,7 @@ contract SftRolesRegistry is
         emit RoleRevoked(_commitmentId, _role, _grantee);
     }
 
-    function withdrawNfts(
+    function releaseTokens(
         uint256 _commitmentId
     ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         uint256 numberOfRoles = commitmentIdToRoles[_commitmentId].length();
@@ -135,7 +135,7 @@ contract SftRolesRegistry is
         );
 
         delete commitments[_commitmentId];
-        emit NftsWithdrawn(_commitmentId);
+        emit TokensReleased(_commitmentId);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {

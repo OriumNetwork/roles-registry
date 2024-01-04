@@ -22,7 +22,7 @@ interface ISftRolesRegistry is IERC165 {
     /** Events **/
 
     /// @notice Emitted when tokens are committed (deposited or frozen).
-    /// @param _grantor The owner of the NFTs.
+    /// @param _grantor The owner of the SFTs.
     /// @param _commitmentId The identifier of the commitment created.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
@@ -38,7 +38,7 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Emitted when a role is granted.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user receiving the role.
+    /// @param _grantee The recipient the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
@@ -54,12 +54,12 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Emitted when a role is revoked.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user that receives the role revocation.
+    /// @param _grantee The recipient of the role revocation.
     event RoleRevoked(uint256 indexed _commitmentId, bytes32 indexed _role, address indexed _grantee);
 
-    /// @notice Emitted when a user withdrawNfts tokens from a commitment.
+    /// @notice Emitted when a user releases tokens from a commitment.
     /// @param _commitmentId The commitment identifier.
-    event NftsWithdrawn(uint256 indexed _commitmentId);
+    event TokensReleased(uint256 indexed _commitmentId);
 
     /// @notice Emitted when a user is approved to manage roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -70,7 +70,7 @@ interface ISftRolesRegistry is IERC165 {
     /** External Functions **/
 
     /// @notice Commits tokens (deposits on a contract or freezes balance).
-    /// @param _grantor The owner of the NFTs.
+    /// @param _grantor The owner of the SFTs.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _tokenAmount The token amount.
@@ -85,7 +85,7 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Grants a role to `_grantee`.
     /// @param _commitmentId The identifier of the commitment.
     /// @param _role The role identifier.
-    /// @param _grantee The user receiving the role.
+    /// @param _grantee The recipient the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
@@ -101,12 +101,12 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Revokes a role.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user that gets their role revoked.
+    /// @param _grantee The recipient of the role revocation.
     function revokeRole(uint256 _commitmentId, bytes32 _role, address _grantee) external;
 
-    /// @notice Withdraws tokens back to grantor.
+    /// @notice Releases tokens back to grantor.
     /// @param _commitmentId The commitment identifier.
-    function withdrawNfts(uint256 _commitmentId) external;
+    function releaseTokens(uint256 _commitmentId) external;
 
     /// @notice Approves operator to grant and revoke roles on behalf of another user.
     /// @param _tokenAddress The token address.
@@ -139,7 +139,7 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Returns the custom data of a role assignment.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user that received the role.
+    /// @param _grantee The recipient the role.
     /// @return data_ The custom data.
     function roleData(
         uint256 _commitmentId,
@@ -150,7 +150,7 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Returns the expiration date of a role assignment.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user that received the role.
+    /// @param _grantee The recipient the role.
     /// @return expirationDate_ The expiration date.
     function roleExpirationDate(
         uint256 _commitmentId,
@@ -161,7 +161,7 @@ interface ISftRolesRegistry is IERC165 {
     /// @notice Returns the expiration date of a role assignment.
     /// @param _commitmentId The commitment identifier.
     /// @param _role The role identifier.
-    /// @param _grantee The user that received the role.
+    /// @param _grantee The recipient the role.
     /// @return revocable_ Whether the role is revocable or not.
     function isRoleRevocable(
         uint256 _commitmentId,
@@ -169,7 +169,7 @@ interface ISftRolesRegistry is IERC165 {
         address _grantee
     ) external view returns (bool revocable_);
 
-    /// @notice Checks if the grantor approved the operator for all NFTs.
+    /// @notice Checks if the grantor approved the operator for all SFTs.
     /// @param _tokenAddress The token address.
     /// @param _grantor The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.

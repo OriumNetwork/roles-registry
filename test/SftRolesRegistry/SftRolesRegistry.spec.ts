@@ -336,7 +336,7 @@ describe('SftRolesRegistry', async () => {
     })
   })
 
-  describe('withdrawNfts', async () => {
+  describe('releaseTokens', async () => {
     let CommitmentCreated: Commitment
     let GrantRoleData: GrantRoleData
 
@@ -346,21 +346,21 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should revert when sender is not grantor or approved', async () => {
-      await expect(SftRolesRegistry.connect(anotherUser).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(anotherUser).releaseTokens(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: account not approved',
       )
     })
 
     it('should revert when there is an active role', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId)).to.be.revertedWith(
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId)).to.be.revertedWith(
         'SftRolesRegistry: commitment has an active non-revocable role',
       )
     })
 
-    it('should withdraw when there are revocable roles', async () => {
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+    it('should release when there are revocable roles', async () => {
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
@@ -372,10 +372,10 @@ describe('SftRolesRegistry', async () => {
         )
     })
 
-    it('should withdraw when there are no roles', async () => {
+    it('should release when there are no roles', async () => {
       await assertRevokeRoleEvent(SftRolesRegistry, grantor, GrantRoleData.commitmentId, GrantRoleData.role, grantee)
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
@@ -387,11 +387,11 @@ describe('SftRolesRegistry', async () => {
         )
     })
 
-    it('should withdraw when there are expired roles', async () => {
+    it('should release when there are expired roles', async () => {
       await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, false)
       await time.increase(ONE_DAY)
-      await expect(SftRolesRegistry.connect(grantor).withdrawNfts(GrantRoleData.commitmentId))
-        .to.emit(SftRolesRegistry, 'NftsWithdrawn')
+      await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
+        .to.emit(SftRolesRegistry, 'TokensReleased')
         .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
         .withArgs(
@@ -593,7 +593,7 @@ describe('SftRolesRegistry', async () => {
       }
     })
 
-    it('should grant 10 roles, then revoke them, withdraw and wait for them to expire', async () => {
+    it('should grant 10 roles, then revoke them, release and wait for them to expire', async () => {
       const currentDate = await time.latest()
       const roles = Array(10)
         .fill(0)
@@ -680,9 +680,9 @@ describe('SftRolesRegistry', async () => {
         ),
       ).to.be.equal(leftoverTokenAmount)
 
-      // withdraw commitment
+      // release commitment
       for (let i = 1; i < roles.length + 1; i++) {
-        await expect(SftRolesRegistry.connect(grantor).withdrawNfts(i)).to.not.be.reverted
+        await expect(SftRolesRegistry.connect(grantor).releaseTokens(i)).to.not.be.reverted
       }
       expect(
         await SftRolesRegistry.roleBalanceOf(
