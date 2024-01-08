@@ -103,8 +103,9 @@ contract SftRolesRegistry is
         uint256 _commitmentId
     ) external onlyOwnerOrApproved(commitments[_commitmentId].grantor, commitments[_commitmentId].tokenAddress) {
         uint256 numberOfRoles = commitmentIdToRoles[_commitmentId].length();
-        for (uint256 i = numberOfRoles; i > 0; i--) {
-            bytes32 role = commitmentIdToRoles[_commitmentId].at(i - 1);
+        for (uint256 i = numberOfRoles; i > 0; ) {
+            i--;
+            bytes32 role = commitmentIdToRoles[_commitmentId].at(i);
             address grantee = lastGrantee[_commitmentId][role];
             uint256 itemId = _getItemId(_commitmentId, role, grantee);
 
