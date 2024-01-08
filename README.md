@@ -7,11 +7,9 @@
 [![Discord](https://img.shields.io/discord/1009147970832322632?label=discord&logo=discord&logoColor=white)](https://discord.gg/NaNTgPK5rx)
 [![Twitter Follow](https://img.shields.io/twitter/follow/oriumnetwork?label=Follow&style=social)](https://twitter.com/OriumNetwork)
 
-[comment]: <> (TODO: Add link and EIP number for ERC-1155 Roles Registry when available)
-
 This repository contains multiple implementations of two EIPs (Ethereum Improvement Proposals):
 * ERC-7432 (Non-Fungible Token Roles).
-* ERC-TBD (Semi-Fungible Token Roles).
+* ERC-7589 (Semi-Fungible Token Roles).
 
 The goal of these EIPs is to introduce role management for NFTs. Each role assignment is associated with one or more
 NFTs and expire automatically at a given timestamp. Token Roles can be deeply integrated with dApps to create a
@@ -21,13 +19,13 @@ ownership. The same user could also grant multiple `keccak256("PROPERTY_TENANT")
 access the digital property.
 
 You can find the full specification here: [ERC-721 Token Roles](https://eips.ethereum.org/EIPS/eip-7432) and
-[ERC-1155 Token Roles](TBD).
+[ERC-1155 Token Roles](https://eips.ethereum.org/EIPS/eip-7589).
 
 ## Implementations
 
 * [ERC-7432 NFT Roles Registry](./contracts/RolesRegistry.sol): ERC-721 NFT Owners can grant roles without depositing NFTs.
-* [ERC-TBD SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistry.sol): ERC-1155 NFT Owners can grant roles after depositing NFTs.
-* [ERC-TBD Single-Role SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistrySingleRole.sol): ERC-1155 NFT Owners can grant a single pre-defined role after depositing
+* [ERC-7589 SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistry.sol): ERC-1155 NFT Owners can grant roles after depositing NFTs.
+* [ERC-7589 Single-Role SFT Roles Registry](./contracts/RolesRegistry/SftRolesRegistrySingleRole.sol): ERC-1155 NFT Owners can grant a single pre-defined role after depositing
   NFTs.
 
 ## Build
