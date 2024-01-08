@@ -30,8 +30,6 @@ async function main() {
   const tokenIds = [217]
 
   // get hardhat accounts
-  const accounts = await ethers.getSigners()
-  const granteeAddress = accounts[0].address
   const grantorAddress = await kmsSigner.getAddress()
 
   const blockTimestamp = (await provider.getBlock('latest')).timestamp
