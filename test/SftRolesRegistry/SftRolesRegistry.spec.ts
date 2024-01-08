@@ -359,22 +359,19 @@ describe('SftRolesRegistry', async () => {
     })
 
     it('should release when there are two revocable roles', async () => {
-
-      await assertGrantRoleEvent(
-        SftRolesRegistry, grantor, 1, grantee.address, true, grantor, 'ANOTHER_ROLE'
-      )
+      await assertGrantRoleEvent(SftRolesRegistry, grantor, 1, grantee.address, true, grantor, 'ANOTHER_ROLE')
 
       await expect(SftRolesRegistry.connect(grantor).releaseTokens(GrantRoleData.commitmentId))
         .to.emit(SftRolesRegistry, 'TokensReleased')
-          .withArgs(GrantRoleData.commitmentId)
+        .withArgs(GrantRoleData.commitmentId)
         .to.emit(MockToken, 'TransferSingle')
-          .withArgs(
-            SftRolesRegistry.address,
-            SftRolesRegistry.address,
-            grantor.address,
-            CommitmentCreated.tokenId,
-            CommitmentCreated.tokenAmount,
-          )
+        .withArgs(
+          SftRolesRegistry.address,
+          SftRolesRegistry.address,
+          grantor.address,
+          CommitmentCreated.tokenId,
+          CommitmentCreated.tokenAmount,
+        )
     })
 
     it('should release when there are no roles', async () => {
