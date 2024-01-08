@@ -55,11 +55,13 @@ export async function assertGrantRoleEvent(
   grantee: string,
   revocable = true,
   anotherUser?: SignerWithAddress,
+  role?: string,
 ) {
   const grantRoleData = await buildGrantRole({
     commitmentId,
     grantee,
     revocable,
+    role
   })
   if (anotherUser) {
     const tokenAddress = await SftRolesRegistry.tokenAddressOf(commitmentId)
