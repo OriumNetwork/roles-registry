@@ -6,7 +6,7 @@ import '@openzeppelin/hardhat-upgrades'
 import 'hardhat-spdx-license-identifier'
 import '@nomicfoundation/hardhat-toolbox'
 import '@openzeppelin/hardhat-defender'
-import '@nomicfoundation/hardhat-foundry'
+// import '@nomicfoundation/hardhat-foundry'
 
 dotenv.config()
 

@@ -1,4 +1,4 @@
-export interface Record {
+export interface Commitment {
   grantor: string
   tokenAddress: string
   tokenId: number
@@ -6,16 +6,16 @@ export interface Record {
 }
 
 export interface GrantRoleData {
-  recordId: number
+  commitmentId: number
   role: string
   grantee: string
-  expirationDate: number | null
+  expirationDate: number
   revocable: boolean
   data: string
 }
 
 export interface RoleAssignment {
-  nonce: number
+  itemId: number
   role: string
   tokenAddress: string
   tokenId: number
@@ -28,7 +28,7 @@ export interface RoleAssignment {
 }
 
 export interface RevokeRoleData {
-  nonce: number
+  itemId: number
   role: string
   tokenAddress: string
   tokenId: number

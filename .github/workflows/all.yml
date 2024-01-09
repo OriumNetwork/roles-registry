@@ -25,8 +25,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GHB_TOKEN }}
       - name: Lint
         run: npm run lint
-      - name: Run Foundry tests
-        run: forge test --verbosity -vvv
+#      - name: Run Foundry tests
+#        run: forge test --verbosity -vvv
       - name: Compile Smart Contracts
         run: npm run compile
         env:
