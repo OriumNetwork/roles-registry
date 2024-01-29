@@ -1,7 +1,7 @@
 import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
-import { DeployAddresses } from '../config'
-import { RoleAssignment } from '../test/types'
+import { DeployAddresses } from '../../config'
+import { RoleAssignment } from '../../test/types'
 
 const kmsCredentials = {
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AKIAxxxxxxxxxxxxxxxx', // credentials for your IAM user with KMS access
@@ -13,7 +13,7 @@ const kmsCredentials = {
 const networkConfig: any = network.config
 const provider = new ethers.providers.JsonRpcProvider(networkConfig.url || '')
 const FEE_DATA: any = {
-  maxFeePerGas: ethers.utils.parseUnits('170', 'gwei'),
+  maxFeePerGas: ethers.utils.parseUnits('200', 'gwei'),
   maxPriorityFeePerGas: ethers.utils.parseUnits('5', 'gwei'),
 }
 provider.getFeeData = async () => FEE_DATA
@@ -24,13 +24,12 @@ async function main() {
   const rolesRegistry = await ethers.getContractAt(
     'RolesRegistry',
     DeployAddresses[CONTRACT_NAME], // This address is the same on all networks
+    kmsSigner,
   )
 
   const tokenIds = [217]
 
   // get hardhat accounts
-  const accounts = await ethers.getSigners()
-  const granteeAddress = accounts[0].address
   const grantorAddress = await kmsSigner.getAddress()
 
   const blockTimestamp = (await provider.getBlock('latest')).timestamp
@@ -44,22 +43,15 @@ async function main() {
       tokenAddress: '0xa03c4e40d1fcaa826591007a17ca929ef8adbf1c', //Chronos travaler polygon
       tokenId,
       grantor: grantorAddress,
-      grantee: granteeAddress,
+      grantee: grantorAddress,
       expirationDate: expirationDate,
       data: ethers.constants.HashZero,
     }
 
-    const tx = await rolesRegistry.revokeRoleFrom(
-      roleAssignment.role,
-      roleAssignment.tokenAddress,
-      roleAssignment.tokenId,
-      roleAssignment.grantor,
-      roleAssignment.grantee,
-    )
-
-    console.log(`Revoking role ${ROLE_NAME} for token ${tokenId} txHash: ${tx.hash}`)
+    const tx = await rolesRegistry.connect(kmsSigner).grantRevocableRoleFrom(roleAssignment)
+    console.log(`Granting role ${ROLE_NAME} for token ${tokenId} txHash: ${tx.hash}`)
     await tx.wait()
-    console.log(`Role ${ROLE_NAME} revoked for token ${tokenId} txHash: ${tx.hash}`)
+    console.log(`Role ${ROLE_NAME} granted for token ${tokenId} txHash: ${tx.hash}`)
   }
 }
 

@@ -1,6 +1,6 @@
 import { ethers, network } from 'hardhat'
 import { AwsKmsSigner } from '@govtechsg/ethers-aws-kms-signer'
-import { DeployAddresses } from '../config'
+import { DeployAddresses } from '../../config'
 import { keccak256 } from 'ethers/lib/utils'
 
 const kmsCredentials = {
