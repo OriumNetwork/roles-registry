@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { IERC7432 } from './IERC7432.sol';
 
-interface IRolesRegistryCustodial {
+interface IRolesRegistryCustodial is IERC7432 {
 
     /// @notice Emitted when tokens are deposited.
     /// @param _owner The owner of the NFTs.
