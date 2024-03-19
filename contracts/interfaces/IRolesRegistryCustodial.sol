@@ -26,6 +26,10 @@ interface IRolesRegistryCustodial is IERC7432 {
         uint256 indexed _tokenId
     );
     
+    /// @notice Deposits an NFT into the contract.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    function deposit(address _tokenAddress, uint256 _tokenId) external;
 
     /// @notice Withdraws an NFT from the contract.
     /// @param _tokenAddress The token address.

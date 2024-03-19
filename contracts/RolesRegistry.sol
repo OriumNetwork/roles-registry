@@ -94,17 +94,11 @@ contract RolesRegistryCustodial is IRolesRegistryCustodial {
         // Just an example of transfer logic when granting roles
         // that would be a separated helper function
         address _tokenOwner = tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId];
-        if (_tokenOwner != address(0)) {
-            require(_tokenOwner == _roleAssignment.grantor, 'RolesRegistry: grantor must be token owner');
-        } else {
-            IERC721(_roleAssignment.tokenAddress).transferFrom(
-                _roleAssignment.grantor,
-                address(this),
-                _roleAssignment.tokenId
-            );
-            tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId] = _roleAssignment.grantor;
-            emit Deposit(_roleAssignment.grantor, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
-        }
+        // Not necessary to check, just for verbosity
+        require(address(0) != _tokenOwner, 'RolesRegistry: token must be deposited');
+        // An alternative would be depositing the token if it's not deposited while granting the role
+        // Just left that way for simplicity
+        require(_tokenOwner == _roleAssignment.grantor, 'RolesRegistry: grantor must be token owner');
     }
 
     function revokeRole(
@@ -149,6 +143,16 @@ contract RolesRegistryCustodial is IRolesRegistryCustodial {
         delete roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
         delete latestGrantees[_tokenAddress][_tokenId][_role];
         emit RoleRevoked(_role, _tokenAddress, _tokenId, _revoker, _grantee);
+    }
+
+    function deposit(
+        address _tokenAddress,
+        uint256 _tokenId
+    ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {
+        address _tokenOwner = IERC721(_tokenAddress).ownerOf(_tokenId);
+        IERC721(_tokenAddress).transferFrom(_tokenOwner, address(this), _tokenId);
+        tokenOwners[_tokenAddress][_tokenId] = _tokenOwner;
+        emit Deposit(_tokenOwner, _tokenAddress, _tokenId);
     }
 
     function withdraw(
