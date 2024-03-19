@@ -21,6 +21,7 @@ interface IERC7432 is IERC165 {
         address grantor;
         address grantee;
         uint64 expirationDate;
+        bool revocable;
         bytes data;
     }
 
@@ -69,12 +70,9 @@ interface IERC7432 is IERC165 {
     /** External Functions **/
 
     /// @notice Grants a role on behalf of a user.
+    /// @dev Deposits the NFTs into the contract if they are not already deposited.
     /// @param _roleAssignment The role assignment data.
-    function grantRoleFrom(RoleAssignment calldata _roleAssignment) external;
-
-    /// @notice Grants a role on behalf of a user.
-    /// @param _roleAssignment The role assignment data.
-    function grantRevocableRoleFrom(RoleAssignment calldata _roleAssignment) external;
+    function grantRole(RoleAssignment calldata _roleAssignment) external;
 
     /// @notice Revokes a role on behalf of a user.
     /// @param _role The role identifier.
@@ -82,7 +80,7 @@ interface IERC7432 is IERC165 {
     /// @param _tokenId The token identifier.
     /// @param _revoker The user revoking the role.
     /// @param _grantee The user that receives the role revocation.
-    function revokeRoleFrom(
+    function revokeRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -138,7 +136,7 @@ interface IERC7432 is IERC165 {
         uint256 _tokenId,
         address _grantor,
         address _grantee
-    ) external view returns (RoleData memory data_);
+    ) external view returns (bytes memory data_);
 
     /// @notice Returns the expiration date of a role assignment.
     /// @param _role The role identifier.
@@ -162,6 +160,20 @@ interface IERC7432 is IERC165 {
         address _tokenAddress,
         address _grantor,
         address _operator
+    ) external view returns (bool);
+
+    /// @notice Checks if a role is revocable.
+    /// @param _role The role identifier.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @param _grantor The user that assigned the role.
+    /// @param _grantee The user that received the role.
+    function isRoleRevocable(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantor,
+        address _grantee
     ) external view returns (bool);
 
     /// @notice Returns the last grantee of a role.
