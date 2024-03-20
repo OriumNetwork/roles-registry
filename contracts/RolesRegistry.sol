@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.9;
 
-import { IERC7432 } from './interfaces/IERC7432.sol';
+import { IERC7432b } from './interfaces/IERC7432b.sol';
 import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
-contract RolesRegistry is IERC7432 {
+contract RolesRegistryCustodial is IERC7432b {
     // grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => RoleData)))) public roleAssignments;
 
@@ -15,6 +15,9 @@ contract RolesRegistry is IERC7432 {
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
+
+    // tokenAddress => tokenId => owner
+    mapping(address => mapping(uint256 => address)) public tokenOwners;
 
     modifier validExpirationDate(uint64 _expirationDate) {
         require(_expirationDate > block.timestamp, 'RolesRegistry: expiration date must be in the future');
@@ -44,24 +47,14 @@ contract RolesRegistry is IERC7432 {
         _;
     }
 
-    function grantRoleFrom(
+    function grantRole(
         RoleAssignment calldata _roleAssignment
     )
         external
         override
         onlyOwnerOrApproved(_roleAssignment.tokenAddress, _roleAssignment.tokenId, _roleAssignment.grantor)
     {
-        _grantRole(_roleAssignment, false);
-    }
-
-    function grantRevocableRoleFrom(
-        RoleAssignment calldata _roleAssignment
-    )
-        external
-        override
-        onlyOwnerOrApproved(_roleAssignment.tokenAddress, _roleAssignment.tokenId, _roleAssignment.grantor)
-    {
-        _grantRole(_roleAssignment, true);
+        _grantRole(_roleAssignment, _roleAssignment.revocable);
     }
 
     function _grantRole(
@@ -97,9 +90,25 @@ contract RolesRegistry is IERC7432 {
             _revocable,
             _roleAssignment.data
         );
+
+        // Just an example of token commitment logic when granting roles
+
+        address _tokenOwner = tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId];
+
+        if (_tokenOwner != address(0)) {
+            require(
+                IERC721(_roleAssignment.tokenAddress).ownerOf(_roleAssignment.tokenId) == _roleAssignment.grantor,
+                'RolesRegistry: grantor must be token owner'
+            );
+            IERC721(_roleAssignment.tokenAddress).transferFrom(_tokenOwner, address(this), _roleAssignment.tokenId);
+            tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId] = _tokenOwner;
+            emit TokensCommitted(_tokenOwner, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
+        } else {
+            require(_tokenOwner == _roleAssignment.grantor, 'RolesRegistry: grantor must be token owner');
+        }
     }
 
-    function revokeRoleFrom(
+    function revokeRole(
         bytes32 _role,
         address _tokenAddress,
         uint256 _tokenId,
@@ -143,6 +152,21 @@ contract RolesRegistry is IERC7432 {
         emit RoleRevoked(_role, _tokenAddress, _tokenId, _revoker, _grantee);
     }
 
+    function deposit(
+        address _tokenAddress,
+        uint256 _tokenId
+    ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {}
+
+    function releaseTokens(
+        address _tokenAddress,
+        uint256 _tokenId
+    ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {
+        address _tokenOwner = tokenOwners[_tokenAddress][_tokenId];
+        IERC721(_tokenAddress).transferFrom(address(this), _tokenOwner, _tokenId);
+        delete tokenOwners[_tokenAddress][_tokenId];
+        emit TokensReleased(_tokenOwner, _tokenAddress, _tokenId);
+    }
+
     function hasNonUniqueRole(
         bytes32 _role,
         address _tokenAddress,
@@ -171,8 +195,8 @@ contract RolesRegistry is IERC7432 {
         uint256 _tokenId,
         address _grantor, // not used, but needed for compatibility with ERC7432
         address _grantee
-    ) external view returns (RoleData memory) {
-        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role];
+    ) external view returns (bytes memory) {
+        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role].data;
     }
 
     function roleExpirationDate(
@@ -186,7 +210,7 @@ contract RolesRegistry is IERC7432 {
     }
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == type(IERC7432).interfaceId;
+        return interfaceId == type(IERC7432b).interfaceId;
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {
@@ -200,6 +224,20 @@ contract RolesRegistry is IERC7432 {
         address _operator
     ) public view override returns (bool) {
         return tokenApprovals[_grantor][_tokenAddress][_operator];
+    }
+
+    function isRoleRevocable(
+        bytes32 _role,
+        address _tokenAddress,
+        uint256 _tokenId,
+        address _grantor,
+        address _grantee
+    ) public view override returns (bool) {
+        return roleAssignments[_grantee][_tokenAddress][_tokenId][_role].revocable;
+    }
+
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view override returns (address) {
+        return tokenOwners[_tokenAddress][_tokenId];
     }
 
     function lastGrantee(
