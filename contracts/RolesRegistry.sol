@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.9;
 
-import { IRolesRegistryCustodial } from './interfaces/IRolesRegistryCustodial.sol';
+import { IERC7432b } from './interfaces/IERC7432b.sol';
 import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import { ERC165Checker } from '@openzeppelin/contracts/utils/introspection/ERC165Checker.sol';
 
-contract RolesRegistryCustodial is IRolesRegistryCustodial {
+contract RolesRegistryCustodial is IERC7432b {
     // grantee => tokenAddress => tokenId => role => struct(expirationDate, data)
     mapping(address => mapping(address => mapping(uint256 => mapping(bytes32 => RoleData)))) public roleAssignments;
 
@@ -91,14 +91,21 @@ contract RolesRegistryCustodial is IRolesRegistryCustodial {
             _roleAssignment.data
         );
 
-        // Just an example of transfer logic when granting roles
-        // that would be a separated helper function
+        // Just an example of token commitment logic when granting roles
+
         address _tokenOwner = tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId];
-        // Not necessary to check, just for verbosity
-        require(address(0) != _tokenOwner, 'RolesRegistry: token must be deposited');
-        // An alternative would be depositing the token if it's not deposited while granting the role
-        // Just left that way for simplicity
-        require(_tokenOwner == _roleAssignment.grantor, 'RolesRegistry: grantor must be token owner');
+
+        if (_tokenOwner != address(0)) {
+            require(
+                IERC721(_roleAssignment.tokenAddress).ownerOf(_roleAssignment.tokenId) == _roleAssignment.grantor,
+                'RolesRegistry: grantor must be token owner'
+            );
+            IERC721(_roleAssignment.tokenAddress).transferFrom(_tokenOwner, address(this), _roleAssignment.tokenId);
+            tokenOwners[_roleAssignment.tokenAddress][_roleAssignment.tokenId] = _tokenOwner;
+            emit TokensCommitted(_tokenOwner, _roleAssignment.tokenAddress, _roleAssignment.tokenId);
+        } else {
+            require(_tokenOwner == _roleAssignment.grantor, 'RolesRegistry: grantor must be token owner');
+        }
     }
 
     function revokeRole(
@@ -148,21 +155,16 @@ contract RolesRegistryCustodial is IRolesRegistryCustodial {
     function deposit(
         address _tokenAddress,
         uint256 _tokenId
-    ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {
-        address _tokenOwner = IERC721(_tokenAddress).ownerOf(_tokenId);
-        IERC721(_tokenAddress).transferFrom(_tokenOwner, address(this), _tokenId);
-        tokenOwners[_tokenAddress][_tokenId] = _tokenOwner;
-        emit Deposit(_tokenOwner, _tokenAddress, _tokenId);
-    }
+    ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {}
 
-    function withdraw(
+    function releaseTokens(
         address _tokenAddress,
         uint256 _tokenId
     ) external onlyOwnerOrApproved(_tokenAddress, _tokenId, msg.sender) {
         address _tokenOwner = tokenOwners[_tokenAddress][_tokenId];
         IERC721(_tokenAddress).transferFrom(address(this), _tokenOwner, _tokenId);
         delete tokenOwners[_tokenAddress][_tokenId];
-        emit Withdraw(_tokenOwner, _tokenAddress, _tokenId);
+        emit TokensReleased(_tokenOwner, _tokenAddress, _tokenId);
     }
 
     function hasNonUniqueRole(
@@ -208,7 +210,7 @@ contract RolesRegistryCustodial is IRolesRegistryCustodial {
     }
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == type(IRolesRegistryCustodial).interfaceId;
+        return interfaceId == type(IERC7432b).interfaceId;
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _isApproved) external override {

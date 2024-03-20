@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol';
 
-/// @title ERC-7432 Non-Fungible Token Roles
+/// @title ERC-7432a Non-Fungible Token Roles Non-Custodial Interface
 /// @dev See https://eips.ethereum.org/EIPS/eip-7432
 /// Note: the ERC-165 identifier for this interface is 0x04984ac8.
 interface IERC7432a is IERC165 {

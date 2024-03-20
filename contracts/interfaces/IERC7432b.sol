@@ -4,6 +4,9 @@ pragma solidity 0.8.9;
 
 import { IERC7432a } from './IERC7432a.sol';
 
+/// @title ERC-7432b Non-Fungible Token Roles Custodial Interface
+/// @dev See https://eips.ethereum.org/EIPS/eip-7432
+/// Note: the ERC-165 identifier for this interface is 0x.
 interface IERC7432b is IERC7432a {
     /// @notice Emitted when tokens are committed (deposited or frozen).
     /// @param _owner The owner of the NFTs.
