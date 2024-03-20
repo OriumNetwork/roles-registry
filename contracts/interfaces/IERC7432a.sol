@@ -7,7 +7,7 @@ import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol
 /// @title ERC-7432 Non-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-7432
 /// Note: the ERC-165 identifier for this interface is 0x04984ac8.
-interface IERC7432 is IERC165 {
+interface IERC7432a is IERC165 {
     struct RoleData {
         uint64 expirationDate;
         bool revocable;
@@ -70,7 +70,7 @@ interface IERC7432 is IERC165 {
     /** External Functions **/
 
     /// @notice Grants a role on behalf of a user.
-    /// @dev Deposits the NFTs into the contract if they are not already deposited.
+    /// @dev In custodial implementation it also commits tokens (deposits on a contract or freezes balance).
     /// @param _roleAssignment The role assignment data.
     function grantRole(RoleAssignment calldata _roleAssignment) external;
 
