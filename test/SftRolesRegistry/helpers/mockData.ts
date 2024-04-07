@@ -1,14 +1,12 @@
-import { solidityKeccak256 } from 'ethers/lib/utils'
-import { GrantRoleData, Commitment, RoleAssignment } from '../types'
-import { generateRandomInt } from '../../helpers'
+import { GrantRoleData, Commitment } from '../types'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { ethers } from 'ethers'
 import { ISftRolesRegistry__factory } from '../../../typechain-types'
 import { ICommitTokensAndGrantRoleExtension__factory } from '../../../typechain-types'
 import { IRoleBalanceOfExtension__factory } from '../../../typechain-types'
+import { ONE_DAY, ROLE, generateRandomInt, generateErc165InterfaceId } from '../../helpers'
 
 const { HashZero, AddressZero } = ethers.constants
-export const ONE_DAY = 60 * 60 * 24
 
 export function buildCommitment({
   grantor = AddressZero,
@@ -21,7 +19,7 @@ export function buildCommitment({
 
 export async function buildGrantRole({
   commitmentId = generateRandomInt(),
-  role = 'UNIQUE_ROLE',
+  role = ROLE,
   grantee = AddressZero,
   expirationDate = null,
   revocable = true,
@@ -29,50 +27,7 @@ export async function buildGrantRole({
 }): Promise<GrantRoleData> {
   return {
     commitmentId,
-    role: generateRoleId(role),
-    grantee,
-    expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,
-    revocable,
-    data,
-  }
-}
-
-export function generateRoleId(role: string) {
-  return solidityKeccak256(['string'], [role])
-}
-
-export async function buildRoleAssignment({
-  // default values
-  itemId = generateRandomInt(),
-  role = 'UNIQUE_ROLE',
-  tokenAddress = AddressZero,
-  tokenId = generateRandomInt(),
-  tokenAmount = generateRandomInt(),
-  grantor = AddressZero,
-  grantee = AddressZero,
-  expirationDate = null,
-  revocable = true,
-  data = HashZero,
-}: {
-  // types
-  itemId?: number
-  role?: string
-  tokenAddress?: string
-  tokenId?: number
-  tokenAmount?: number
-  grantor?: string
-  grantee?: string
-  expirationDate?: number | null
-  revocable?: boolean
-  data?: string
-} = {}): Promise<RoleAssignment> {
-  return {
-    itemId,
-    role: generateRoleId(role),
-    tokenAddress,
-    tokenId,
-    tokenAmount,
-    grantor,
+    role,
     grantee,
     expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,
     revocable,
@@ -93,13 +48,4 @@ export function getCommitTokensAndGrantRoleInterfaceId() {
 export function getRoleBalanceOfInterfaceId() {
   const iface = IRoleBalanceOfExtension__factory.createInterface()
   return generateErc165InterfaceId(iface)
-}
-
-function generateErc165InterfaceId(contractInterface: ethers.utils.Interface) {
-  let interfaceID = ethers.constants.Zero
-  const functions: string[] = Object.keys(contractInterface.functions).filter(f => f !== 'supportsInterface(bytes4)')
-  for (let i = 0; i < functions.length; i++) {
-    interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
-  }
-  return interfaceID
 }

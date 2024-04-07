@@ -2,6 +2,7 @@ import { buildGrantRole, buildCommitment } from './mockData'
 import { expect } from 'chai'
 import { Contract } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { generateRoleId } from '../../helpers'
 
 export async function assertCreateCommitmentEvent(
   SftRolesRegistry: Contract,
@@ -61,7 +62,7 @@ export async function assertGrantRoleEvent(
     commitmentId,
     grantee,
     revocable,
-    role,
+    role: role ? generateRoleId(role) : undefined,
   })
   if (anotherUser) {
     const tokenAddress = await SftRolesRegistry.tokenAddressOf(commitmentId)

@@ -5,11 +5,9 @@ import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Commitment, GrantRoleData } from './types'
-import { generateRandomInt } from '../helpers'
+import { generateRandomInt, ONE_DAY, generateRoleId } from '../helpers'
 import { assertCreateCommitmentEvent, assertGrantRoleEvent, assertRevokeRoleEvent } from './helpers/assertEvents'
 import {
-  ONE_DAY,
-  generateRoleId,
   buildCommitment,
   buildGrantRole,
   getSftRolesRegistryInterfaceId,
