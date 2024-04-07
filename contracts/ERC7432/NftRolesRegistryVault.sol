@@ -23,7 +23,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     // tokenAddress => tokenId => roleId => recipient
     mapping(address => mapping(uint256 => mapping(bytes32 => address))) public latestRecipients;
 
-    // grantor => tokenAddress => operator => isApproved
+    // owner => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
     /** ERC-7432 External Functions **/
@@ -69,7 +69,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
 
         // if caller is recipient, the role can be revoked regardless of its state
         if (_caller != _recipient) {
-            // if caller is grantor, the role can only be revoked if revocable or expired
+            // if caller is owner, the role can only be revoked if revocable or expired
             require(
                 roles[_tokenAddress][_tokenId][_roleId].revocable ||
                     roles[_tokenAddress][_tokenId][_roleId].expirationDate < block.timestamp,
@@ -139,10 +139,10 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
 
     function isRoleApprovedForAll(
         address _tokenAddress,
-        address _grantor,
+        address _owner,
         address _operator
     ) public view returns (bool) {
-        return tokenApprovals[_grantor][_tokenAddress][_operator];
+        return tokenApprovals[_owner][_tokenAddress][_operator];
     }
 
     /** ERC-7432 Vault Extension Functions **/

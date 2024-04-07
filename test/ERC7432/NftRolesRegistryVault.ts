@@ -172,13 +172,13 @@ describe('NftRolesRegistryVault', () => {
       await depositNftAndGrantRole({ recipient: recipient.address })
     })
 
-    it('should revert when sender is not grantor, recipient or approved', async () => {
+    it('should revert when sender is not owner, recipient or approved', async () => {
       await expect(
         NftRolesRegistryVault.connect(anotherUser).revokeRole(role.tokenAddress, role.tokenId, role.roleId),
       ).to.be.revertedWith('NftRolesRegistryVault: role does not exist or sender is not approved')
     })
 
-    it('should revert when sender is grantor but role is not revocable nor expired', async () => {
+    it('should revert when sender is owner but role is not revocable nor expired', async () => {
       await expect(NftRolesRegistryVault.connect(owner).grantRole({ ...role, revocable: false }))
 
       await expect(
@@ -199,13 +199,13 @@ describe('NftRolesRegistryVault', () => {
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is grantor (and role is revocable)', async () => {
+    it('should revoke role when sender is owner (and role is revocable)', async () => {
       await expect(NftRolesRegistryVault.connect(owner).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is grantor, and role is not revocable but is expired', async () => {
+    it('should revoke role when sender is owner, and role is not revocable but is expired', async () => {
       await expect(NftRolesRegistryVault.connect(owner).grantRole({ ...role, revocable: false }))
         .to.emit(NftRolesRegistryVault, 'RoleGranted')
         .withArgs(
@@ -225,14 +225,14 @@ describe('NftRolesRegistryVault', () => {
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is approved by grantor (and role is revocable)', async () => {
+    it('should revoke role when sender is approved by owner (and role is revocable)', async () => {
       await NftRolesRegistryVault.connect(owner).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
       await expect(NftRolesRegistryVault.connect(anotherUser).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is approved both by grantor and recipient, and role not revocable', async () => {
+    it('should revoke role when sender is approved both by owner and recipient, and role not revocable', async () => {
       await expect(
         NftRolesRegistryVault.connect(owner).grantRole({
           ...role,

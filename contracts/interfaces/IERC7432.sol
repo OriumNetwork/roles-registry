@@ -24,7 +24,7 @@ interface IERC7432 is IERC165 {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _roleId The role identifier.
-    /// @param _grantor The user assigning the role.
+    /// @param _owner The user assigning the role.
     /// @param _recipient The user receiving the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
@@ -33,7 +33,7 @@ interface IERC7432 is IERC165 {
         address indexed _tokenAddress,
         uint256 indexed _tokenId,
         bytes32 indexed _roleId,
-        address _grantor,
+        address _owner,
         address _recipient,
         uint64 _expirationDate,
         bool _revocable,
@@ -116,14 +116,14 @@ interface IERC7432 is IERC165 {
         bytes32 _roleId
     ) external view returns (bool revocable_);
 
-    /// @notice Verifies if the grantor approved the operator.
+    /// @notice Verifies if the owner approved the operator.
     /// @param _tokenAddress The token address.
-    /// @param _grantor The user that approved the operator.
+    /// @param _owner The user that approved the operator.
     /// @param _operator The user that can grant and revoke roles.
     /// @return Whether the operator is approved.
     function isRoleApprovedForAll(
         address _tokenAddress,
-        address _grantor,
+        address _owner,
         address _operator
     ) external view returns (bool);
 }
