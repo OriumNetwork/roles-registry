@@ -12,7 +12,7 @@ interface IERC7432 is IERC165 {
         bytes32 roleId;
         address tokenAddress;
         uint256 tokenId;
-        address grantee;
+        address recipient;
         uint64 expirationDate;
         bool revocable;
         bytes data;
@@ -25,7 +25,7 @@ interface IERC7432 is IERC165 {
     /// @param _tokenId The token identifier.
     /// @param _roleId The role identifier.
     /// @param _grantor The user assigning the role.
-    /// @param _grantee The user receiving the role.
+    /// @param _recipient The user receiving the role.
     /// @param _expirationDate The expiration date of the role.
     /// @param _revocable Whether the role is revocable or not.
     /// @param _data Any additional data about the role.
@@ -34,7 +34,7 @@ interface IERC7432 is IERC165 {
         uint256 indexed _tokenId,
         bytes32 indexed _roleId,
         address _grantor,
-        address _grantee,
+        address _recipient,
         uint64 _expirationDate,
         bool _revocable,
         bytes _data
@@ -72,16 +72,16 @@ interface IERC7432 is IERC165 {
 
     /** View Functions **/
 
-    /// @notice Retrieves the grantee of an NFT role.
+    /// @notice Retrieves the recipient of an NFT role.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _roleId The role identifier.
-    /// @return grantee_ The user that received the role.
-    function granteeOf(
+    /// @return recipient_ The user that received the role.
+    function recipientOf(
         address _tokenAddress,
         uint256 _tokenId,
         bytes32 _roleId
-    ) external view returns (address grantee_);
+    ) external view returns (address recipient_);
 
     /// @notice Retrieves the custom data of a role assignment.
     /// @param _tokenAddress The token address.

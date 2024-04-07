@@ -8,7 +8,7 @@ import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     struct RoleData {
-        address grantee;
+        address recipient;
         uint64 expirationDate;
         bool revocable;
         bytes data;
@@ -17,11 +17,11 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     // tokenAddress => tokenId => owner
     mapping(address => mapping(uint256 => address)) public originalOwners;
 
-    // tokenAddress => tokenId => roleId => struct(grantee, expirationDate, revocable, data)
+    // tokenAddress => tokenId => roleId => struct(recipient, expirationDate, revocable, data)
     mapping(address => mapping(uint256 => mapping(bytes32 => RoleData))) public roles;
 
-    // tokenAddress => tokenId => roleId => grantee
-    mapping(address => mapping(uint256 => mapping(bytes32 => address))) public latestGrantees;
+    // tokenAddress => tokenId => roleId => recipient
+    mapping(address => mapping(uint256 => mapping(bytes32 => address))) public latestRecipients;
 
     // grantor => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
@@ -43,20 +43,20 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         );
 
         roles[_role.tokenAddress][_role.tokenId][_role.roleId] = RoleData(
-            _role.grantee,
+            _role.recipient,
             _role.expirationDate,
             _role.revocable,
             _role.data
         );
 
-        latestGrantees[_role.tokenAddress][_role.tokenId][_role.roleId] = _role.grantee;
+        latestRecipients[_role.tokenAddress][_role.tokenId][_role.roleId] = _role.recipient;
 
         emit RoleGranted(
             _role.tokenAddress,
             _role.tokenId,
             _role.roleId,
             _originalOwner,
-            _role.grantee,
+            _role.recipient,
             _role.expirationDate,
             _role.revocable,
             _role.data
@@ -64,11 +64,11 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     }
 
     function revokeRole(address _tokenAddress, uint256 _tokenId, bytes32 _roleId) external override {
-        address _grantee = roles[_tokenAddress][_tokenId][_roleId].grantee;
-        address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _grantee);
+        address _recipient = roles[_tokenAddress][_tokenId][_roleId].recipient;
+        address _caller = _getApprovedCaller(_tokenAddress, _tokenId, _recipient);
 
-        // if caller is grantee, the role can be revoked regardless of its state
-        if (_caller != _grantee) {
+        // if caller is recipient, the role can be revoked regardless of its state
+        if (_caller != _recipient) {
             // if caller is grantor, the role can only be revoked if revocable or expired
             require(
                 roles[_tokenAddress][_tokenId][_roleId].revocable ||
@@ -79,7 +79,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
 
         delete originalOwners[_tokenAddress][_tokenId];
         delete roles[_tokenAddress][_tokenId][_roleId];
-        delete latestGrantees[_tokenAddress][_tokenId][_roleId];
+        delete latestRecipients[_tokenAddress][_tokenId][_roleId];
         emit RoleRevoked(_tokenAddress, _tokenId, _roleId);
     }
 
@@ -90,16 +90,16 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
 
     /** ERC-7432 View Functions **/
 
-    function granteeOf(
+    function recipientOf(
         address _tokenAddress,
         uint256 _tokenId,
         bytes32 _roleId
-    ) external view returns (address grantee_) {
+    ) external view returns (address recipient_) {
         if (
             _isTokenDeposited(_tokenAddress, _tokenId) &&
             roles[_tokenAddress][_tokenId][_roleId].expirationDate > block.timestamp
         ) {
-            return roles[_tokenAddress][_tokenId][_roleId].grantee;
+            return roles[_tokenAddress][_tokenId][_roleId].recipient;
         }
         return address(0);
     }
@@ -199,15 +199,15 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     /// @notice Returns the account approved to call the revokeRole function. Reverts otherwise.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
-    /// @param _grantee The user that received the role.
+    /// @param _recipient The user that received the role.
     /// @return caller_ The approved account.
     function _getApprovedCaller(
         address _tokenAddress,
         uint256 _tokenId,
-        address _grantee
+        address _recipient
     ) internal view returns (address caller_) {
-        if (msg.sender == _grantee || isRoleApprovedForAll(_tokenAddress, _grantee, msg.sender)) {
-            return _grantee;
+        if (msg.sender == _recipient || isRoleApprovedForAll(_tokenAddress, _recipient, msg.sender)) {
+            return _recipient;
         }
         address originalOwner = originalOwners[_tokenAddress][_tokenId];
         if (msg.sender == originalOwner || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender)) {

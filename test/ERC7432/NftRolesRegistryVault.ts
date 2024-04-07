@@ -15,7 +15,7 @@ describe('NftRolesRegistryVault', () => {
   let NftRolesRegistryVault: Contract
   let MockErc721Token: Contract
   let owner: SignerWithAddress
-  let grantee: SignerWithAddress
+  let recipient: SignerWithAddress
   let anotherUser: SignerWithAddress
   let role: Role
 
@@ -26,20 +26,20 @@ describe('NftRolesRegistryVault', () => {
     MockErc721Token = await MockErc721TokenFactory.deploy()
     const signers = await ethers.getSigners()
     owner = signers[0]
-    grantee = signers[1]
+    recipient = signers[1]
     anotherUser = signers[2]
   }
 
-  async function depositNftAndGrantRole({ grantee = AddressZero }) {
+  async function depositNftAndGrantRole({ recipient = AddressZero }) {
     await MockErc721Token.connect(owner).approve(NftRolesRegistryVault.address, role.tokenId)
-    await expect(NftRolesRegistryVault.connect(owner).grantRole({ ...role, grantee }))
+    await expect(NftRolesRegistryVault.connect(owner).grantRole({ ...role, recipient }))
       .to.emit(NftRolesRegistryVault, 'RoleGranted')
       .withArgs(
         role.tokenAddress,
         role.tokenId,
         role.roleId,
         owner.address,
-        grantee,
+        recipient,
         role.expirationDate,
         role.revocable,
         role.data,
@@ -72,7 +72,7 @@ describe('NftRolesRegistryVault', () => {
 
     describe('when NFT is not deposited', () => {
       it('should revert when sender is not approved or owner', async () => {
-        await expect(NftRolesRegistryVault.connect(grantee).grantRole(role)).to.be.revertedWith(
+        await expect(NftRolesRegistryVault.connect(recipient).grantRole(role)).to.be.revertedWith(
           'NftRolesRegistryVault: sender must be owner or approved',
         )
       })
@@ -104,7 +104,7 @@ describe('NftRolesRegistryVault', () => {
             role.tokenId,
             role.roleId,
             owner.address,
-            role.grantee,
+            role.recipient,
             role.expirationDate,
             role.revocable,
             role.data,
@@ -133,7 +133,7 @@ describe('NftRolesRegistryVault', () => {
             role.tokenId,
             role.roleId,
             owner.address,
-            role.grantee,
+            role.recipient,
             role.expirationDate,
             role.revocable,
             role.data,
@@ -150,7 +150,7 @@ describe('NftRolesRegistryVault', () => {
             role.tokenId,
             role.roleId,
             owner.address,
-            role.grantee,
+            role.recipient,
             role.expirationDate,
             role.revocable,
             role.data,
@@ -169,10 +169,10 @@ describe('NftRolesRegistryVault', () => {
 
   describe('revokeRole', () => {
     beforeEach(async () => {
-      await depositNftAndGrantRole({ grantee: grantee.address })
+      await depositNftAndGrantRole({ recipient: recipient.address })
     })
 
-    it('should revert when sender is not grantor, grantee or approved', async () => {
+    it('should revert when sender is not grantor, recipient or approved', async () => {
       await expect(
         NftRolesRegistryVault.connect(anotherUser).revokeRole(role.tokenAddress, role.tokenId, role.roleId),
       ).to.be.revertedWith('NftRolesRegistryVault: role does not exist or sender is not approved')
@@ -186,14 +186,14 @@ describe('NftRolesRegistryVault', () => {
       ).to.be.revertedWith('NftRolesRegistryVault: role is not revocable nor expired')
     })
 
-    it('should revoke role when sender is grantee', async () => {
-      await expect(NftRolesRegistryVault.connect(grantee).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
+    it('should revoke role when sender is recipient', async () => {
+      await expect(NftRolesRegistryVault.connect(recipient).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is approved by grantee', async () => {
-      await NftRolesRegistryVault.connect(grantee).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
+    it('should revoke role when sender is approved by recipient', async () => {
+      await NftRolesRegistryVault.connect(recipient).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
       await expect(NftRolesRegistryVault.connect(anotherUser).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
@@ -213,7 +213,7 @@ describe('NftRolesRegistryVault', () => {
           role.tokenId,
           role.roleId,
           owner.address,
-          role.grantee,
+          role.recipient,
           role.expirationDate,
           false,
           role.data,
@@ -232,16 +232,16 @@ describe('NftRolesRegistryVault', () => {
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
     })
 
-    it('should revoke role when sender is approved both by grantor and grantee, and role not revocable', async () => {
+    it('should revoke role when sender is approved both by grantor and recipient, and role not revocable', async () => {
       await expect(
         NftRolesRegistryVault.connect(owner).grantRole({
           ...role,
-          grantee: grantee.address,
+          recipient: recipient.address,
           revocable: false,
         }),
       )
       await NftRolesRegistryVault.connect(owner).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
-      await NftRolesRegistryVault.connect(grantee).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
+      await NftRolesRegistryVault.connect(recipient).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
       await expect(NftRolesRegistryVault.connect(anotherUser).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
@@ -250,7 +250,7 @@ describe('NftRolesRegistryVault', () => {
 
   describe('withdraw', () => {
     beforeEach(async () => {
-      await depositNftAndGrantRole({ grantee: grantee.address })
+      await depositNftAndGrantRole({ recipient: recipient.address })
     })
 
     it('should revert if token is not deposited', async () => {
@@ -286,7 +286,7 @@ describe('NftRolesRegistryVault', () => {
   describe('view functions', async () => {
     describe('when NFT is deposited', async () => {
       it('hasRole should return default value', async () => {
-        expect(await NftRolesRegistryVault.granteeOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
+        expect(await NftRolesRegistryVault.recipientOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
           AddressZero,
         )
       })
@@ -308,12 +308,12 @@ describe('NftRolesRegistryVault', () => {
 
     describe('when NFT is deposited', async () => {
       beforeEach(async () => {
-        await depositNftAndGrantRole({ grantee: grantee.address })
+        await depositNftAndGrantRole({ recipient: recipient.address })
       })
 
       it('hasRole should return value from mapping', async () => {
-        expect(await NftRolesRegistryVault.granteeOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
-          grantee.address,
+        expect(await NftRolesRegistryVault.recipientOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
+          recipient.address,
         )
       })
 
