@@ -77,7 +77,6 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
             );
         }
 
-        delete originalOwners[_tokenAddress][_tokenId];
         delete roles[_tokenAddress][_tokenId][_roleId];
         delete latestRecipients[_tokenAddress][_tokenId][_roleId];
         emit RoleRevoked(_tokenAddress, _tokenId, _roleId);
