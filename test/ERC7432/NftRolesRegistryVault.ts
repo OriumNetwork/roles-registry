@@ -252,10 +252,8 @@ describe('NftRolesRegistryVault', () => {
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
         .withArgs(role.tokenAddress, role.tokenId, role.roleId)
 
-      expect(await NftRolesRegistryVault.originalOwners(role.tokenAddress, role.tokenId))
-        .to.be.equal(owner.address)
+      expect(await NftRolesRegistryVault.originalOwners(role.tokenAddress, role.tokenId)).to.be.equal(owner.address)
     })
-
   })
 
   describe('withdraw', () => {

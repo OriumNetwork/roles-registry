@@ -20,9 +20,6 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     // tokenAddress => tokenId => roleId => struct(recipient, expirationDate, revocable, data)
     mapping(address => mapping(uint256 => mapping(bytes32 => RoleData))) public roles;
 
-    // tokenAddress => tokenId => roleId => recipient
-    mapping(address => mapping(uint256 => mapping(bytes32 => address))) public latestRecipients;
-
     // owner => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
@@ -48,8 +45,6 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
             _role.revocable,
             _role.data
         );
-
-        latestRecipients[_role.tokenAddress][_role.tokenId][_role.roleId] = _role.recipient;
 
         emit RoleGranted(
             _role.tokenAddress,
@@ -78,7 +73,6 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         }
 
         delete roles[_tokenAddress][_tokenId][_roleId];
-        delete latestRecipients[_tokenAddress][_tokenId][_roleId];
         emit RoleRevoked(_tokenAddress, _tokenId, _roleId);
     }
 
@@ -136,11 +130,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         return roles[_tokenAddress][_tokenId][_roleId].revocable;
     }
 
-    function isRoleApprovedForAll(
-        address _tokenAddress,
-        address _owner,
-        address _operator
-    ) public view returns (bool) {
+    function isRoleApprovedForAll(address _tokenAddress, address _owner, address _operator) public view returns (bool) {
         return tokenApprovals[_owner][_tokenAddress][_operator];
     }
 
