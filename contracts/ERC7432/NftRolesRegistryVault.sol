@@ -146,8 +146,8 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
             'NftRolesRegistryVault: sender must be owner or approved'
         );
 
-        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
         delete originalOwners[_tokenAddress][_tokenId];
+        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
         emit Withdraw(originalOwner, _tokenAddress, _tokenId);
     }
 
