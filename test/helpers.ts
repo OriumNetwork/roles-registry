@@ -1,5 +1,9 @@
-import { Contract } from 'ethers'
+import { Contract, ethers } from 'ethers'
 import { expect } from 'chai'
+import { solidityKeccak256 } from 'ethers/lib/utils'
+
+export const ONE_DAY = 60 * 60 * 24
+export const ROLE = generateRoleId('UNIQUE_ROLE')
 
 /**
  * Validates the list length, order, head and tail
@@ -113,4 +117,17 @@ export async function printList(LinkedLists: Contract, listId: string) {
 
 export function generateRandomInt() {
   return Math.floor(Math.random() * 1000 * 1000) + 1
+}
+
+export function generateRoleId(role: string) {
+  return solidityKeccak256(['string'], [role])
+}
+
+export function generateErc165InterfaceId(contractInterface: ethers.utils.Interface) {
+  let interfaceID = ethers.constants.Zero
+  const functions: string[] = Object.keys(contractInterface.functions).filter(f => f !== 'supportsInterface(bytes4)')
+  for (let i = 0; i < functions.length; i++) {
+    interfaceID = interfaceID.xor(contractInterface.getSighash(functions[i]))
+  }
+  return interfaceID
 }
