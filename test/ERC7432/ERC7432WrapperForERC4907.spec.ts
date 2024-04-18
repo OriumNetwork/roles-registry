@@ -270,7 +270,7 @@ describe('ERC7432WrapperForERC4907', async () => {
     it('should revert when sender is not owner, recipient or approved', async () => {
       await expect(
         ERC7432WrapperForERC4907.connect(anotherUser).revokeRole(role.tokenAddress, 1, role.roleId),
-      ).to.be.revertedWith('ERC7432WrapperForERC4907: role does not exist or sender is not approved')
+      ).to.be.revertedWith('ERC7432WrapperForERC4907: sender is not recipient, owner or approved')
     })
 
     it('should revert when sender is owner but role is not revocable nor expired', async () => {

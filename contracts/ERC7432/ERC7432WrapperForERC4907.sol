@@ -11,10 +11,12 @@ import { IERC7432VaultExtension } from '../interfaces/IERC7432VaultExtension.sol
 import { IOriumWrapperManager } from '../interfaces/IOriumWrapperManager.sol';
 import { IWrapNFT } from '../interfaces/DoubleProtocol/IWrapNFT.sol';
 
+/// @title ERC-7432 Wrapper for ERC-4907
+/// @dev This contract introduces a ERC-7432 interface to manage the role of ERC-4907 NFTs.
 contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Holder {
     bytes32 public constant USER_ROLE = keccak256('User()');
 
-    IOriumWrapperManager public oriumWrapperManager;
+    address public oriumWrapperManager;
 
     // tokenAddress => tokenId => owner
     mapping(address => mapping(uint256 => address)) public originalOwners;
@@ -35,16 +37,16 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
     /** ERC-7432 External Functions **/
 
     constructor(address _oriumWrapperManagerAddress) {
-        oriumWrapperManager = IOriumWrapperManager(_oriumWrapperManagerAddress);
+        oriumWrapperManager = _oriumWrapperManagerAddress;
     }
 
     function grantRole(Role calldata _role) external override onlyUserRole(_role.roleId) {
-        address _wrappedTokenAddress = oriumWrapperManager.getWrappedTokenOf(_role.tokenAddress);
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_role.tokenAddress);
         require(_wrappedTokenAddress != address(0), 'ERC7432WrapperForERC4907: token not supported');
 
         require(
             _role.expirationDate > block.timestamp &&
-                _role.expirationDate < block.timestamp + oriumWrapperManager.getMaxDurationOf(_role.tokenAddress),
+                _role.expirationDate < block.timestamp + IOriumWrapperManager(oriumWrapperManager).getMaxDurationOf(_role.tokenAddress),
             'ERC7432WrapperForERC4907: invalid expiration date'
         );
 
@@ -78,7 +80,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         uint256 _tokenId,
         bytes32 _roleId
     ) external override onlyUserRole(_roleId) {
-        address _wrappedTokenAddress = oriumWrapperManager.getWrappedTokenOf(_tokenAddress);
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
         require(_wrappedTokenAddress != address(0), 'ERC7432WrapperForERC4907: token not supported');
 
         address _recipient = IERC4907(_wrappedTokenAddress).userOf(_tokenId);
@@ -111,7 +113,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         uint256 _tokenId,
         bytes32 _roleId
     ) external view returns (address recipient_) {
-        address _wrappedTokenAddress = oriumWrapperManager.getWrappedTokenOf(_tokenAddress);
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
         if (_wrappedTokenAddress == address(0) || _roleId != USER_ROLE) {
             return address(0);
         }
@@ -127,7 +129,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         uint256 _tokenId,
         bytes32 _roleId
     ) external view returns (uint64 expirationDate_) {
-        address _wrappedTokenAddress = oriumWrapperManager.getWrappedTokenOf(_tokenAddress);
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
         if (_wrappedTokenAddress == address(0) || _roleId != USER_ROLE) {
             return 0;
         }
@@ -142,19 +144,19 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         return
             _roleId == USER_ROLE &&
             isRevocableRole[_tokenAddress][_tokenId] &&
-            oriumWrapperManager.getWrappedTokenOf(_tokenAddress) != address(0);
+            IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress) != address(0);
     }
 
     function isRoleApprovedForAll(address _tokenAddress, address _owner, address _operator) public view returns (bool) {
         return
-            _operator == oriumWrapperManager.getMarketplaceAddressOf(_tokenAddress) ||
+            _operator == IOriumWrapperManager(oriumWrapperManager).getMarketplaceAddressOf(_tokenAddress) ||
             tokenApprovals[_owner][_tokenAddress][_operator];
     }
 
     /** ERC-7432 Vault Extension Functions **/
 
     function withdraw(address _tokenAddress, uint256 _tokenId) external override {
-        address _wrappedTokenAddress = oriumWrapperManager.getWrappedTokenOf(_tokenAddress);
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
         require(_wrappedTokenAddress != address(0), 'ERC7432WrapperForERC4907: token not supported');
 
         address originalOwner = originalOwners[_tokenAddress][_tokenId];
@@ -170,6 +172,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         );
 
         delete originalOwners[_tokenAddress][_tokenId];
+        delete isRevocableRole[_tokenAddress][_tokenId];
         IWrapNFT(_wrappedTokenAddress).redeem(_tokenId);
         IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
         emit Withdraw(originalOwner, _tokenAddress, _tokenId);
@@ -245,6 +248,6 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         if (msg.sender == originalOwner || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender)) {
             return originalOwner;
         }
-        revert('ERC7432WrapperForERC4907: role does not exist or sender is not approved');
+        revert('ERC7432WrapperForERC4907: sender is not recipient, owner or approved');
     }
 }
