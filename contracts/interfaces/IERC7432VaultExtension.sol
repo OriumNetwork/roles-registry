@@ -4,7 +4,7 @@ pragma solidity 0.8.9;
 
 /// @title ERC-7432 Vault Extension
 /// @dev See https://eips.ethereum.org/EIPS/eip-7432
-/// Note: the ERC-165 identifier for this interface is 0xf3fef3a3.
+/// Note: the ERC-165 identifier for this interface is 0xecd7217f.
 interface IERC7432VaultExtension {
     /** Events **/
 
