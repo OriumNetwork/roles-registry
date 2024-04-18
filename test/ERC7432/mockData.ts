@@ -16,7 +16,7 @@ export async function buildRole({
 }): Promise<Role> {
   return {
     roleId: generateRoleId(roleId),
-    tokenAddress,
+    tokenAddress: ethers.utils.getAddress(tokenAddress),
     tokenId,
     recipient,
     expirationDate: expirationDate ? expirationDate : (await time.latest()) + ONE_DAY,

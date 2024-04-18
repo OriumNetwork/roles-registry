@@ -33,14 +33,18 @@ describe('OriumWrapperManager', async () => {
   })
 
   it('ensure that only owner can call setter functions', async () => {
-    await expect(OriumWrapperManager.connect(marketplaceAccount).setMarketplaceAddress(marketplaceAccount.address))
-      .to.be.revertedWith('Ownable: caller is not the owner')
-    await expect(OriumWrapperManager.connect(marketplaceAccount).mapToken(token1.address, token2.address))
-      .to.be.revertedWith('Ownable: caller is not the owner')
-    await expect(OriumWrapperManager.connect(marketplaceAccount).unmapToken(token1.address))
-      .to.be.revertedWith('Ownable: caller is not the owner')
-    await expect(OriumWrapperManager.connect(marketplaceAccount).setMaxDuration(token1.address, 1000))
-      .to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(
+      OriumWrapperManager.connect(marketplaceAccount).setMarketplaceAddress(marketplaceAccount.address),
+    ).to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(
+      OriumWrapperManager.connect(marketplaceAccount).mapToken(token1.address, token2.address),
+    ).to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(OriumWrapperManager.connect(marketplaceAccount).unmapToken(token1.address)).to.be.revertedWith(
+      'Ownable: caller is not the owner',
+    )
+    await expect(
+      OriumWrapperManager.connect(marketplaceAccount).setMaxDuration(token1.address, 1000),
+    ).to.be.revertedWith('Ownable: caller is not the owner')
   })
 
   it('should set and get marketplace address', async () => {
