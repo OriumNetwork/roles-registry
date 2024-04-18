@@ -32,6 +32,17 @@ describe('OriumWrapperManager', async () => {
     await loadFixture(deployContracts)
   })
 
+  it('ensure that only owner can call setter functions', async () => {
+    await expect(OriumWrapperManager.connect(marketplaceAccount).setMarketplaceAddress(marketplaceAccount.address))
+      .to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(OriumWrapperManager.connect(marketplaceAccount).mapToken(token1.address, token2.address))
+      .to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(OriumWrapperManager.connect(marketplaceAccount).unmapToken(token1.address))
+      .to.be.revertedWith('Ownable: caller is not the owner')
+    await expect(OriumWrapperManager.connect(marketplaceAccount).setMaxDuration(token1.address, 1000))
+      .to.be.revertedWith('Ownable: caller is not the owner')
+  })
+
   it('should set and get marketplace address', async () => {
     expect(await OriumWrapperManager.setMarketplaceAddress(marketplaceAccount.address)).to.not.be.reverted
     expect(await OriumWrapperManager.getMarketplaceAddressOf(AddressZero)).to.equal(marketplaceAccount.address)

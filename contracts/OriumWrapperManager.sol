@@ -47,7 +47,7 @@ contract OriumWrapperManager is Initializable, OwnableUpgradeable, IOriumWrapper
 
     /** View Functions **/
 
-    function getMarketplaceAddressOf(address _tokenAddress) external view override returns (address) {
+    function getMarketplaceAddressOf(address) external view override returns (address) {
         return marketplaceAddress;
     }
 
