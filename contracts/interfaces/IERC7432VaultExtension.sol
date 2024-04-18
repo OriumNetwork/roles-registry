@@ -21,4 +21,12 @@ interface IERC7432VaultExtension {
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     function withdraw(address _tokenAddress, uint256 _tokenId) external;
+
+    /** View Functions **/
+
+    /// @notice Retrieves the owner of a deposited NFT.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @return owner_ The owner of the token.
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_);
 }
