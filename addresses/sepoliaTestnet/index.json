@@ -1,0 +1,8 @@
+{
+    "OriumWrapperManager": {
+        "address": "0x6F54401fA5f002F42749eA3D1E34FCDDB4A8b852",
+        "operator": "0xf954Ad2d7B27aC20345631fbB776Ee423E7873b2",
+        "implementation": "0x2F881C5c65092ebe28C31b52Ce76A8158A720ADf",
+        "proxyAdmin": "0xE830038A395CE7B3E4A1714e2c21eF70915741C5"
+    }
+}
