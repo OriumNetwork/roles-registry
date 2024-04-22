@@ -119,7 +119,7 @@ describe('NftRolesRegistryVault', () => {
         await depositNftAndGrantRole({})
       })
 
-      it('should revert when sender is not approved or original owner', async () => {
+      it('should revert when sender is not approved nor original owner', async () => {
         await expect(NftRolesRegistryVault.connect(anotherUser).grantRole(role)).to.be.revertedWith(
           'NftRolesRegistryVault: sender must be owner or approved',
         )
@@ -292,8 +292,8 @@ describe('NftRolesRegistryVault', () => {
   })
 
   describe('view functions', async () => {
-    describe('when NFT is deposited', async () => {
-      it('hasRole should return default value', async () => {
+    describe('when NFT is not deposited', async () => {
+      it('recipientOf should return default value', async () => {
         expect(await NftRolesRegistryVault.recipientOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
           AddressZero,
         )
@@ -319,7 +319,11 @@ describe('NftRolesRegistryVault', () => {
         await depositNftAndGrantRole({ recipient: recipient.address })
       })
 
-      it('hasRole should return value from mapping', async () => {
+      it('ownerOf should return value from mapping', async () => {
+        expect(await NftRolesRegistryVault.ownerOf(role.tokenAddress, role.tokenId)).to.be.equal(owner.address)
+      })
+
+      it('recipientOf should return value from mapping', async () => {
         expect(await NftRolesRegistryVault.recipientOf(role.tokenAddress, role.tokenId, role.roleId)).to.be.equal(
           recipient.address,
         )

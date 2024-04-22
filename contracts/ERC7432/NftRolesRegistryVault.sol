@@ -151,6 +151,10 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         emit Withdraw(originalOwner, _tokenAddress, _tokenId);
     }
 
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_) {
+        return originalOwners[_tokenAddress][_tokenId];
+    }
+
     /** ERC-165 Functions **/
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {

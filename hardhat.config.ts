@@ -20,11 +20,12 @@ const {
   POLYGONSCAN_API_KEY,
   ETHER_SCAN_API_KEY,
   POLYGON_PROVIDER_URL,
-  MUMBAI_PROVIDER_URL,
-  GOERLI_PROVIDER_URL,
+  SEPOLIA_TESTNET_PROVIDER_URL,
   CRONOS_TESTNET_PROVIDER_URL,
+  MOONBEAM_PROVIDER_URL,
   CRONOS_PROVIDER_URL,
   CRONOSSCAN_API_KEY,
+  MOONSCAN_API_KEY,
 } = process.env
 
 const BASE_CONFIG = {
@@ -66,10 +67,10 @@ const BASE_CONFIG = {
   etherscan: {
     apiKey: {
       polygon: POLYGONSCAN_API_KEY,
-      polygonMumbai: POLYGONSCAN_API_KEY,
-      goerli: ETHER_SCAN_API_KEY,
+      sepolia: ETHER_SCAN_API_KEY,
       cronosTestnet: CRONOSSCAN_API_KEY,
       cronos: CRONOSSCAN_API_KEY,
+      moonbeam: MOONSCAN_API_KEY,
     },
     customChains: [
       {
@@ -113,19 +114,14 @@ const PROD_CONFIG = {
         blockNumber: 45752368,
       },
     },
-    mumbai: {
-      chainId: 80001,
-      url: MUMBAI_PROVIDER_URL,
-      accounts: [DEV_PRIVATE_KEY],
-    },
     polygon: {
       chainId: 137,
       url: POLYGON_PROVIDER_URL,
       accounts: [PROD_PRIVATE_KEY],
     },
-    goerli: {
-      chainId: 5,
-      url: GOERLI_PROVIDER_URL,
+    cronos: {
+      chainId: 25,
+      url: CRONOS_PROVIDER_URL,
       accounts: [DEV_PRIVATE_KEY],
     },
     cronosTestnet: {
@@ -133,9 +129,14 @@ const PROD_CONFIG = {
       url: CRONOS_TESTNET_PROVIDER_URL,
       accounts: [DEV_PRIVATE_KEY],
     },
-    cronos: {
-      chainId: 25,
-      url: CRONOS_PROVIDER_URL,
+    sepoliaTestnet: {
+      chainId: 11155111,
+      url: SEPOLIA_TESTNET_PROVIDER_URL,
+      accounts: [DEV_PRIVATE_KEY],
+    },
+    moonbeam: {
+      chainId: 1284,
+      url: MOONBEAM_PROVIDER_URL,
       accounts: [DEV_PRIVATE_KEY],
     },
   },

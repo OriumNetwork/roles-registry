@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 
 export const ONE_DAY = 60 * 60 * 24
+export const THREE_MONTHS = ONE_DAY * 30 * 3
 export const ROLE = generateRoleId('UNIQUE_ROLE')
 
 /**
