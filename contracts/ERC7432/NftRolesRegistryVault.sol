@@ -3,10 +3,9 @@
 pragma solidity 0.8.9;
 
 import { IERC7432 } from '../interfaces/IERC7432.sol';
-import { IERC7432VaultExtension } from '../interfaces/IERC7432VaultExtension.sol';
 import { IERC721 } from '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
-contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
+contract NftRolesRegistryVault is IERC7432 {
     struct RoleData {
         address recipient;
         uint64 expirationDate;
@@ -23,7 +22,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
     // owner => tokenAddress => operator => isApproved
     mapping(address => mapping(address => mapping(address => bool))) public tokenApprovals;
 
-    /** ERC-7432 External Functions **/
+    /** External Functions **/
 
     function grantRole(IERC7432.Role calldata _role) external override {
         require(_role.expirationDate > block.timestamp, 'NftRolesRegistryVault: expiration date must be in the future');
@@ -76,12 +75,31 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         emit RoleRevoked(_tokenAddress, _tokenId, _roleId);
     }
 
+    function unlockToken(address _tokenAddress, uint256 _tokenId) external override {
+        address originalOwner = originalOwners[_tokenAddress][_tokenId];
+
+        require(_isLocked(_tokenAddress, _tokenId), 'NftRolesRegistryVault: NFT is locked');
+
+        require(
+            originalOwner == msg.sender || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender),
+            'NftRolesRegistryVault: sender must be owner or approved'
+        );
+
+        delete originalOwners[_tokenAddress][_tokenId];
+        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
+        emit TokenUnlocked(originalOwner, _tokenAddress, _tokenId);
+    }
+
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external override {
         tokenApprovals[msg.sender][_tokenAddress][_operator] = _approved;
         emit RoleApprovalForAll(_tokenAddress, _operator, _approved);
     }
 
     /** ERC-7432 View Functions **/
+
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_) {
+        return originalOwners[_tokenAddress][_tokenId];
+    }
 
     function recipientOf(
         address _tokenAddress,
@@ -134,31 +152,10 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         return tokenApprovals[_owner][_tokenAddress][_operator];
     }
 
-    /** ERC-7432 Vault Extension Functions **/
-
-    function withdraw(address _tokenAddress, uint256 _tokenId) external override {
-        address originalOwner = originalOwners[_tokenAddress][_tokenId];
-
-        require(_isWithdrawable(_tokenAddress, _tokenId), 'NftRolesRegistryVault: NFT is not withdrawable');
-
-        require(
-            originalOwner == msg.sender || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender),
-            'NftRolesRegistryVault: sender must be owner or approved'
-        );
-
-        delete originalOwners[_tokenAddress][_tokenId];
-        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
-        emit Withdraw(originalOwner, _tokenAddress, _tokenId);
-    }
-
-    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_) {
-        return originalOwners[_tokenAddress][_tokenId];
-    }
-
     /** ERC-165 Functions **/
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == type(IERC7432).interfaceId || interfaceId == type(IERC7432VaultExtension).interfaceId;
+        return interfaceId == type(IERC7432).interfaceId;
     }
 
     /** Internal Functions **/
@@ -186,6 +183,7 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
             IERC721(_tokenAddress).transferFrom(_currentOwner, address(this), _tokenId);
             originalOwners[_tokenAddress][_tokenId] = _currentOwner;
             originalOwner_ = _currentOwner;
+            emit TokenLocked(_currentOwner, _tokenAddress, _tokenId);
         }
     }
 
@@ -209,12 +207,12 @@ contract NftRolesRegistryVault is IERC7432, IERC7432VaultExtension {
         revert('NftRolesRegistryVault: role does not exist or sender is not approved');
     }
 
-    /// @notice Check if an NFT is withdrawable.
+    /// @notice Checks if an NFT is locked.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
-    /// @return True if the NFT is withdrawable.
-    function _isWithdrawable(address _tokenAddress, uint256 _tokenId) internal view returns (bool) {
-        // todo needs to implement a way to track expiration dates to make sure NFTs are withdrawable
+    /// @return True if the NFT is locked.
+    function _isLocked(address _tokenAddress, uint256 _tokenId) internal view returns (bool) {
+        // todo needs to implement a way to track expiration dates to make sure NFTs are not locked
         // mocked result
         return _isTokenDeposited(_tokenAddress, _tokenId);
     }

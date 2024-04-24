@@ -6,7 +6,7 @@ import { IERC165 } from '@openzeppelin/contracts/utils/introspection/IERC165.sol
 
 /// @title ERC-7432 Non-Fungible Token Roles
 /// @dev See https://eips.ethereum.org/EIPS/eip-7432
-/// Note: the ERC-165 identifier for this interface is 0xfecc9ed3.
+/// Note: the ERC-165 identifier for this interface is 0xd00ca5cf.
 interface IERC7432 is IERC165 {
     struct Role {
         bytes32 roleId;
@@ -19,6 +19,12 @@ interface IERC7432 is IERC165 {
     }
 
     /** Events **/
+
+    /// @notice Emitted when an NFT is locked (deposited or frozen).
+    /// @param _owner The owner of the NFT.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    event TokenLocked(address indexed _owner, address indexed _tokenAddress, uint256 _tokenId);
 
     /// @notice Emitted when a role is granted.
     /// @param _tokenAddress The token address.
@@ -46,6 +52,12 @@ interface IERC7432 is IERC165 {
     /// @param _roleId The role identifier.
     event RoleRevoked(address indexed _tokenAddress, uint256 indexed _tokenId, bytes32 indexed _roleId);
 
+    /// @notice Emitted when an NFT is unlocked (withdrawn or unfrozen).
+    /// @param _owner The original owner of the NFT.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    event TokenUnlocked(address indexed _owner, address indexed _tokenAddress, uint256 indexed _tokenId);
+
     /// @notice Emitted when a user is approved to manage roles on behalf of another user.
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
@@ -64,6 +76,12 @@ interface IERC7432 is IERC165 {
     /// @param _roleId The role identifier.
     function revokeRole(address _tokenAddress, uint256 _tokenId, bytes32 _roleId) external;
 
+    /// @notice Unlocks NFT (transfer back to original owner or unfreeze it).
+    /// @dev Reverts if sender is not approved or the original owner.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    function unlockToken(address _tokenAddress, uint256 _tokenId) external;
+
     /// @notice Approves operator to grant and revoke roles on behalf of another user.
     /// @param _tokenAddress The token address.
     /// @param _operator The user approved to grant and revoke roles.
@@ -71,6 +89,12 @@ interface IERC7432 is IERC165 {
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external;
 
     /** View Functions **/
+
+    /// @notice Retrieves the owner of NFT.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    /// @return owner_ The owner of the token.
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_);
 
     /// @notice Retrieves the recipient of an NFT role.
     /// @param _tokenAddress The token address.
