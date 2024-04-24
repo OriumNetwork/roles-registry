@@ -89,6 +89,8 @@ describe('ERC7432WrapperForERC4907', async () => {
         role.revocable,
         role.data,
       )
+      .to.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+      .withArgs(owner.address, role.tokenAddress, role.tokenId)
       .to.emit(WrappedErc721Token, 'UpdateUser')
       .withArgs(role.tokenId, recipient, role.expirationDate)
   }
@@ -182,6 +184,8 @@ describe('ERC7432WrapperForERC4907', async () => {
             role.revocable,
             role.data,
           )
+          .to.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+          .withArgs(owner.address, role.tokenAddress, role.tokenId)
           .to.emit(WrappedErc721Token, 'UpdateUser')
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
       })
@@ -215,6 +219,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
           .to.not.emit(Erc721Token, 'Transfer')
           .to.not.emit(WrappedErc721Token, 'Transfer')
+          .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
       })
 
       it('should grant role when sender is approved', async () => {
@@ -239,6 +244,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
           .to.not.emit(Erc721Token, 'Transfer')
           .to.not.emit(WrappedErc721Token, 'Transfer')
+          .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
       })
 
       it('should revert when there is a non-expired and non-revocable role', async () => {
@@ -326,6 +332,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           role.data,
         )
         .to.not.emit(Erc721Token, 'Transfer')
+        .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
       await time.increase(THREE_MONTHS)
       await expect(ERC7432WrapperForERC4907.connect(owner).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(ERC7432WrapperForERC4907, 'RoleRevoked')

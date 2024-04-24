@@ -20,6 +20,12 @@ interface IERC7432 is IERC165 {
 
     /** Events **/
 
+    /// @notice Emitted when tokens are committed.
+    /// @param _owner The owner of the NFT.
+    /// @param _tokenAddress The token address.
+    /// @param _tokenId The token identifier.
+    event TokensCommitted(address indexed _owner, address indexed _tokenAddress, uint256 _tokenId);
+
     /// @notice Emitted when a role is granted.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.

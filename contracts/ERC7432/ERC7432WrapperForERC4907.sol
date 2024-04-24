@@ -46,7 +46,8 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
 
         require(
             _role.expirationDate > block.timestamp &&
-                _role.expirationDate < block.timestamp + IOriumWrapperManager(oriumWrapperManager).getMaxDurationOf(_role.tokenAddress),
+                _role.expirationDate <
+                block.timestamp + IOriumWrapperManager(oriumWrapperManager).getMaxDurationOf(_role.tokenAddress),
             'ERC7432WrapperForERC4907: invalid expiration date'
         );
 
@@ -228,6 +229,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
             IWrapNFT(_wrappedTokenAddress).stake(_tokenId);
             originalOwners[_tokenAddress][_tokenId] = _ownerOfOriginalToken;
             originalOwner_ = _ownerOfOriginalToken;
+            emit TokensCommitted(_ownerOfOriginalToken, _tokenAddress, _tokenId);
         }
     }
 
