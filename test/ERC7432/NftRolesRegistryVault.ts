@@ -6,7 +6,7 @@ import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 import { Role } from '../types'
 import { buildRole, getExpiredDate } from './mockData'
 import { expect } from 'chai'
-import { IERC7432__factory, IERC7432VaultExtension__factory } from '../../typechain-types'
+import { IERC7432__factory } from '../../typechain-types'
 import { generateErc165InterfaceId, ONE_DAY } from '../helpers'
 
 const { AddressZero, HashZero } = ethers.constants
@@ -46,6 +46,8 @@ describe('NftRolesRegistryVault', () => {
       )
       .to.emit(MockErc721Token, 'Transfer')
       .withArgs(owner.address, NftRolesRegistryVault.address, role.tokenId)
+      .to.emit(NftRolesRegistryVault, 'TokenLocked')
+      .withArgs(owner.address, role.tokenAddress, role.tokenId)
   }
 
   beforeEach(async () => {
@@ -111,6 +113,8 @@ describe('NftRolesRegistryVault', () => {
           )
           .to.emit(MockErc721Token, 'Transfer')
           .withArgs(owner.address, NftRolesRegistryVault.address, role.tokenId)
+          .to.emit(NftRolesRegistryVault, 'TokenLocked')
+          .withArgs(owner.address, role.tokenAddress, role.tokenId)
       })
     })
 
@@ -139,6 +143,7 @@ describe('NftRolesRegistryVault', () => {
             role.data,
           )
           .to.not.emit(MockErc721Token, 'Transfer')
+          .to.not.emit(NftRolesRegistryVault, 'TokenLocked')
       })
 
       it('should grant role when sender is approved', async () => {
@@ -156,6 +161,7 @@ describe('NftRolesRegistryVault', () => {
             role.data,
           )
           .to.not.emit(MockErc721Token, 'Transfer')
+          .to.not.emit(NftRolesRegistryVault, 'TokenLocked')
       })
 
       it('should revert when there is a non-expired and non-revocable role', async () => {
@@ -219,6 +225,8 @@ describe('NftRolesRegistryVault', () => {
           role.data,
         )
         .to.not.emit(MockErc721Token, 'Transfer')
+        .to.not.emit(NftRolesRegistryVault, 'TokenLocked')
+
       await time.increase(ONE_DAY)
       await expect(NftRolesRegistryVault.connect(owner).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(NftRolesRegistryVault, 'RoleRevoked')
@@ -256,35 +264,35 @@ describe('NftRolesRegistryVault', () => {
     })
   })
 
-  describe('withdraw', () => {
+  describe('unlockToken', () => {
     beforeEach(async () => {
       await depositNftAndGrantRole({ recipient: recipient.address })
     })
 
     it('should revert if token is not deposited', async () => {
       await expect(
-        NftRolesRegistryVault.connect(owner).withdraw(role.tokenAddress, role.tokenId + 1),
-      ).to.be.revertedWith('NftRolesRegistryVault: NFT is not withdrawable')
+        NftRolesRegistryVault.connect(owner).unlockToken(role.tokenAddress, role.tokenId + 1),
+      ).to.be.revertedWith('NftRolesRegistryVault: NFT is locked')
     })
 
     it('should revert if sender is not original owner or approved', async () => {
       await expect(
-        NftRolesRegistryVault.connect(anotherUser).withdraw(role.tokenAddress, role.tokenId),
+        NftRolesRegistryVault.connect(anotherUser).unlockToken(role.tokenAddress, role.tokenId),
       ).to.be.revertedWith('NftRolesRegistryVault: sender must be owner or approved')
     })
 
-    it('should withdraw if sender is owner and NFT is withdrawable', async () => {
-      await expect(NftRolesRegistryVault.connect(owner).withdraw(role.tokenAddress, role.tokenId))
-        .to.emit(NftRolesRegistryVault, 'Withdraw')
+    it('should unlock token if sender is owner and NFT is not locked', async () => {
+      await expect(NftRolesRegistryVault.connect(owner).unlockToken(role.tokenAddress, role.tokenId))
+        .to.emit(NftRolesRegistryVault, 'TokenUnlocked')
         .withArgs(owner.address, role.tokenAddress, role.tokenId)
         .to.emit(MockErc721Token, 'Transfer')
         .withArgs(NftRolesRegistryVault.address, owner.address, role.tokenId)
     })
 
-    it('should withdraw if sender is approved and NFT is withdrawable', async () => {
+    it('should unlock token if sender is approved and NFT is not locked', async () => {
       await NftRolesRegistryVault.connect(owner).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
-      await expect(NftRolesRegistryVault.connect(anotherUser).withdraw(role.tokenAddress, role.tokenId))
-        .to.emit(NftRolesRegistryVault, 'Withdraw')
+      await expect(NftRolesRegistryVault.connect(anotherUser).unlockToken(role.tokenAddress, role.tokenId))
+        .to.emit(NftRolesRegistryVault, 'TokenUnlocked')
         .withArgs(owner.address, role.tokenAddress, role.tokenId)
         .to.emit(MockErc721Token, 'Transfer')
         .withArgs(NftRolesRegistryVault.address, owner.address, role.tokenId)
@@ -361,12 +369,6 @@ describe('NftRolesRegistryVault', () => {
   describe('ERC-165', async () => {
     it('should return true when IERC7432 identifier is provided', async () => {
       const iface = IERC7432__factory.createInterface()
-      const ifaceId = generateErc165InterfaceId(iface)
-      expect(await NftRolesRegistryVault.supportsInterface(ifaceId)).to.be.true
-    })
-
-    it('should return true when IERC7432VaultExtension identifier is provided', async () => {
-      const iface = IERC7432VaultExtension__factory.createInterface()
       const ifaceId = generateErc165InterfaceId(iface)
       expect(await NftRolesRegistryVault.supportsInterface(ifaceId)).to.be.true
     })

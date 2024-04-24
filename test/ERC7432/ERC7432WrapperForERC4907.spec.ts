@@ -7,7 +7,7 @@ import { buildRole, getExpiredDate } from './mockData'
 import { expect } from 'chai'
 import { generateErc165InterfaceId, ROLE, THREE_MONTHS } from '../helpers'
 import { beforeEach } from 'mocha'
-import { IERC7432__factory, IERC7432VaultExtension__factory, IERC721Receiver__factory } from '../../typechain-types'
+import { IERC7432__factory, IERC721Receiver__factory } from '../../typechain-types'
 
 const UserRole = 'User()'
 const NovaCreedTokenAddress = '0x8a514a40ed06fc44b6e0c9875cdd58e20063d10e'
@@ -89,7 +89,7 @@ describe('ERC7432WrapperForERC4907', async () => {
         role.revocable,
         role.data,
       )
-      .to.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+      .to.emit(ERC7432WrapperForERC4907, 'TokenLocked')
       .withArgs(owner.address, role.tokenAddress, role.tokenId)
       .to.emit(WrappedErc721Token, 'UpdateUser')
       .withArgs(role.tokenId, recipient, role.expirationDate)
@@ -184,7 +184,7 @@ describe('ERC7432WrapperForERC4907', async () => {
             role.revocable,
             role.data,
           )
-          .to.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+          .to.emit(ERC7432WrapperForERC4907, 'TokenLocked')
           .withArgs(owner.address, role.tokenAddress, role.tokenId)
           .to.emit(WrappedErc721Token, 'UpdateUser')
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
@@ -219,7 +219,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
           .to.not.emit(Erc721Token, 'Transfer')
           .to.not.emit(WrappedErc721Token, 'Transfer')
-          .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+          .to.not.emit(ERC7432WrapperForERC4907, 'TokenLocked')
       })
 
       it('should grant role when sender is approved', async () => {
@@ -244,7 +244,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           .withArgs(role.tokenId, role.recipient, role.expirationDate)
           .to.not.emit(Erc721Token, 'Transfer')
           .to.not.emit(WrappedErc721Token, 'Transfer')
-          .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+          .to.not.emit(ERC7432WrapperForERC4907, 'TokenLocked')
       })
 
       it('should revert when there is a non-expired and non-revocable role', async () => {
@@ -332,7 +332,7 @@ describe('ERC7432WrapperForERC4907', async () => {
           role.data,
         )
         .to.not.emit(Erc721Token, 'Transfer')
-        .to.not.emit(ERC7432WrapperForERC4907, 'TokensCommitted')
+        .to.not.emit(ERC7432WrapperForERC4907, 'TokenLocked')
       await time.increase(THREE_MONTHS)
       await expect(ERC7432WrapperForERC4907.connect(owner).revokeRole(role.tokenAddress, role.tokenId, role.roleId))
         .to.emit(ERC7432WrapperForERC4907, 'RoleRevoked')
@@ -384,39 +384,39 @@ describe('ERC7432WrapperForERC4907', async () => {
     })
   })
 
-  describe('withdraw', async () => {
+  describe('unlockToken', async () => {
     beforeEach(async () => {
       await depositNftAndGrantRole({ recipient: recipient.address })
     })
 
     it('should revert when token is not supported', async () => {
-      await expect(ERC7432WrapperForERC4907.connect(owner).withdraw(AddressZero, role.roleId)).to.be.revertedWith(
+      await expect(ERC7432WrapperForERC4907.connect(owner).unlockToken(AddressZero, role.roleId)).to.be.revertedWith(
         'ERC7432WrapperForERC4907: token not supported',
       )
     })
 
     it('should revert if token is not deposited', async () => {
       await expect(
-        ERC7432WrapperForERC4907.connect(owner).withdraw(role.tokenAddress, role.tokenId + 1),
+        ERC7432WrapperForERC4907.connect(owner).unlockToken(role.tokenAddress, role.tokenId + 1),
       ).to.be.revertedWith('ERC7432WrapperForERC4907: sender must be owner or approved')
     })
 
     it('should revert if sender is not original owner or approved', async () => {
       await expect(
-        ERC7432WrapperForERC4907.connect(anotherUser).withdraw(role.tokenAddress, role.tokenId),
+        ERC7432WrapperForERC4907.connect(anotherUser).unlockToken(role.tokenAddress, role.tokenId),
       ).to.be.revertedWith('ERC7432WrapperForERC4907: sender must be owner or approved')
     })
 
     it('should revert if role is not revocable and not expired', async () => {
       await ERC7432WrapperForERC4907.connect(owner).grantRole({ ...role, revocable: false })
       await expect(
-        ERC7432WrapperForERC4907.connect(owner).withdraw(role.tokenAddress, role.tokenId),
-      ).to.be.revertedWith('ERC7432WrapperForERC4907: token is not withdrawable')
+        ERC7432WrapperForERC4907.connect(owner).unlockToken(role.tokenAddress, role.tokenId),
+      ).to.be.revertedWith('ERC7432WrapperForERC4907: token has a non-revocable role active')
     })
 
-    it('should withdraw if sender is owner and NFT is withdrawable', async () => {
-      await expect(ERC7432WrapperForERC4907.connect(owner).withdraw(role.tokenAddress, role.tokenId))
-        .to.emit(ERC7432WrapperForERC4907, 'Withdraw')
+    it('should unlock token if sender is owner and NFT is not locked', async () => {
+      await expect(ERC7432WrapperForERC4907.connect(owner).unlockToken(role.tokenAddress, role.tokenId))
+        .to.emit(ERC7432WrapperForERC4907, 'TokenUnlocked')
         .withArgs(owner.address, role.tokenAddress, role.tokenId)
         .to.emit(WrappedErc721Token, 'Redeem')
         .withArgs(ERC7432WrapperForERC4907.address, role.tokenAddress, role.tokenId)
@@ -427,8 +427,8 @@ describe('ERC7432WrapperForERC4907', async () => {
     it('should revert if role is not revocable, but is expired', async () => {
       await ERC7432WrapperForERC4907.connect(owner).grantRole({ ...role, revocable: false })
       await time.increase(THREE_MONTHS)
-      await expect(ERC7432WrapperForERC4907.connect(owner).withdraw(role.tokenAddress, role.tokenId))
-        .to.emit(ERC7432WrapperForERC4907, 'Withdraw')
+      await expect(ERC7432WrapperForERC4907.connect(owner).unlockToken(role.tokenAddress, role.tokenId))
+        .to.emit(ERC7432WrapperForERC4907, 'TokenUnlocked')
         .withArgs(owner.address, role.tokenAddress, role.tokenId)
         .to.emit(WrappedErc721Token, 'Redeem')
         .withArgs(ERC7432WrapperForERC4907.address, role.tokenAddress, role.tokenId)
@@ -436,10 +436,10 @@ describe('ERC7432WrapperForERC4907', async () => {
         .withArgs(ERC7432WrapperForERC4907.address, owner.address, role.tokenId)
     })
 
-    it('should withdraw if sender is approved and NFT is withdrawable', async () => {
+    it('should unlock token if sender is approved and NFT is not locked', async () => {
       await ERC7432WrapperForERC4907.connect(owner).setRoleApprovalForAll(role.tokenAddress, anotherUser.address, true)
-      await expect(ERC7432WrapperForERC4907.connect(anotherUser).withdraw(role.tokenAddress, role.tokenId))
-        .to.emit(ERC7432WrapperForERC4907, 'Withdraw')
+      await expect(ERC7432WrapperForERC4907.connect(anotherUser).unlockToken(role.tokenAddress, role.tokenId))
+        .to.emit(ERC7432WrapperForERC4907, 'TokenUnlocked')
         .withArgs(owner.address, role.tokenAddress, role.tokenId)
         .to.emit(WrappedErc721Token, 'Redeem')
         .withArgs(ERC7432WrapperForERC4907.address, role.tokenAddress, role.tokenId)
@@ -545,12 +545,6 @@ describe('ERC7432WrapperForERC4907', async () => {
   describe('ERC-165', async () => {
     it('should return true when IERC7432 identifier is provided', async () => {
       const iface = IERC7432__factory.createInterface()
-      const ifaceId = generateErc165InterfaceId(iface)
-      expect(await ERC7432WrapperForERC4907.supportsInterface(ifaceId)).to.be.true
-    })
-
-    it('should return true when IERC7432VaultExtension identifier is provided', async () => {
-      const iface = IERC7432VaultExtension__factory.createInterface()
       const ifaceId = generateErc165InterfaceId(iface)
       expect(await ERC7432WrapperForERC4907.supportsInterface(ifaceId)).to.be.true
     })

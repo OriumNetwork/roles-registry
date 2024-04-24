@@ -7,13 +7,12 @@ import { IERC721Receiver } from '@openzeppelin/contracts/token/ERC721/IERC721Rec
 import { ERC721Holder } from '@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol';
 import { IERC7432 } from '../interfaces/IERC7432.sol';
 import { IERC4907 } from '../interfaces/IERC4907.sol';
-import { IERC7432VaultExtension } from '../interfaces/IERC7432VaultExtension.sol';
 import { IOriumWrapperManager } from '../interfaces/IOriumWrapperManager.sol';
 import { IWrapNFT } from '../interfaces/DoubleProtocol/IWrapNFT.sol';
 
 /// @title ERC-7432 Wrapper for ERC-4907
 /// @dev This contract introduces a ERC-7432 interface to manage the role of ERC-4907 NFTs.
-contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Holder {
+contract ERC7432WrapperForERC4907 is IERC7432, ERC721Holder {
     bytes32 public constant USER_ROLE = keccak256('User()');
 
     address public oriumWrapperManager;
@@ -34,7 +33,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         _;
     }
 
-    /** ERC-7432 External Functions **/
+    /** External Functions **/
 
     constructor(address _oriumWrapperManagerAddress) {
         oriumWrapperManager = _oriumWrapperManagerAddress;
@@ -102,12 +101,39 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
         emit RoleRevoked(_tokenAddress, _tokenId, _roleId);
     }
 
+    function unlockToken(address _tokenAddress, uint256 _tokenId) external override {
+        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
+        require(_wrappedTokenAddress != address(0), 'ERC7432WrapperForERC4907: token not supported');
+
+        address originalOwner = originalOwners[_tokenAddress][_tokenId];
+        require(
+            originalOwner == msg.sender || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender),
+            'ERC7432WrapperForERC4907: sender must be owner or approved'
+        );
+
+        require(
+            isRevocableRole[_tokenAddress][_tokenId] ||
+                IERC4907(_wrappedTokenAddress).userExpires(_tokenId) < block.timestamp,
+            'ERC7432WrapperForERC4907: token has a non-revocable role active'
+        );
+
+        delete originalOwners[_tokenAddress][_tokenId];
+        delete isRevocableRole[_tokenAddress][_tokenId];
+        IWrapNFT(_wrappedTokenAddress).redeem(_tokenId);
+        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
+        emit TokenUnlocked(originalOwner, _tokenAddress, _tokenId);
+    }
+
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external override {
         tokenApprovals[msg.sender][_tokenAddress][_operator] = _approved;
         emit RoleApprovalForAll(_tokenAddress, _operator, _approved);
     }
 
-    /** ERC-7432 View Functions **/
+    /** View Functions **/
+
+    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_) {
+        return originalOwners[_tokenAddress][_tokenId];
+    }
 
     function recipientOf(
         address _tokenAddress,
@@ -154,42 +180,10 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
             tokenApprovals[_owner][_tokenAddress][_operator];
     }
 
-    /** ERC-7432 Vault Extension Functions **/
-
-    function withdraw(address _tokenAddress, uint256 _tokenId) external override {
-        address _wrappedTokenAddress = IOriumWrapperManager(oriumWrapperManager).getWrappedTokenOf(_tokenAddress);
-        require(_wrappedTokenAddress != address(0), 'ERC7432WrapperForERC4907: token not supported');
-
-        address originalOwner = originalOwners[_tokenAddress][_tokenId];
-        require(
-            originalOwner == msg.sender || isRoleApprovedForAll(_tokenAddress, originalOwner, msg.sender),
-            'ERC7432WrapperForERC4907: sender must be owner or approved'
-        );
-
-        require(
-            isRevocableRole[_tokenAddress][_tokenId] ||
-                IERC4907(_wrappedTokenAddress).userExpires(_tokenId) < block.timestamp,
-            'ERC7432WrapperForERC4907: token is not withdrawable'
-        );
-
-        delete originalOwners[_tokenAddress][_tokenId];
-        delete isRevocableRole[_tokenAddress][_tokenId];
-        IWrapNFT(_wrappedTokenAddress).redeem(_tokenId);
-        IERC721(_tokenAddress).transferFrom(address(this), originalOwner, _tokenId);
-        emit Withdraw(originalOwner, _tokenAddress, _tokenId);
-    }
-
-    function ownerOf(address _tokenAddress, uint256 _tokenId) external view returns (address owner_) {
-        return originalOwners[_tokenAddress][_tokenId];
-    }
-
     /** ERC-165 Functions **/
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return
-            interfaceId == type(IERC7432).interfaceId ||
-            interfaceId == type(IERC7432VaultExtension).interfaceId ||
-            interfaceId == type(IERC721Receiver).interfaceId;
+        return interfaceId == type(IERC7432).interfaceId || interfaceId == type(IERC721Receiver).interfaceId;
     }
 
     /** Internal Functions **/
@@ -229,7 +223,7 @@ contract ERC7432WrapperForERC4907 is IERC7432, IERC7432VaultExtension, ERC721Hol
             IWrapNFT(_wrappedTokenAddress).stake(_tokenId);
             originalOwners[_tokenAddress][_tokenId] = _ownerOfOriginalToken;
             originalOwner_ = _ownerOfOriginalToken;
-            emit TokensCommitted(_ownerOfOriginalToken, _tokenAddress, _tokenId);
+            emit TokenLocked(_ownerOfOriginalToken, _tokenAddress, _tokenId);
         }
     }
 
