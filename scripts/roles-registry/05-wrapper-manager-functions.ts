@@ -26,15 +26,21 @@ async function main() {
     `Updating ${ContractName} on ${NETWORK} [${WrapperManagerAddress}] with deployer ${deployerAddress}. Continue?`,
   )
 
-  // print(colors.highlight, 'Updating marketplace address...')
-  // const marketplaceAddress = ''
-  // tx = await WrapperManager.setMarketplaceAddress(marketplaceAddress)
-  // await tx.wait()
-  // print(colors.success, `Updated marketplace address ${marketplaceAddress}`)
+  print(colors.highlight, 'Updating marketplace address...')
+  const marketplaceAddress = ''
+  tx = await WrapperManager.setMarketplaceAddress(marketplaceAddress)
+  await tx.wait()
+  print(colors.success, `Updated marketplace address ${marketplaceAddress}`)
+
+  print(colors.highlight, 'Deleting token mapping...')
+  const tokenToUnmap = '0xcb13945ca8104f813992e4315f8ffefe64ac49ca'
+  tx = await WrapperManager.unmapToken(tokenToUnmap)
+  await tx.wait()
+  print(colors.success, `Deleted token mapping for ${tokenToUnmap}: ${tx.hash}`)
 
   print(colors.highlight, 'Updating token mapping...')
   const tokenAddress = '0xcb13945ca8104f813992e4315f8ffefe64ac49ca'
-  const wrapperTokenAddress = '0xB7fdD27a8Df011816205a6e3cAA097DC4D8C2C5d'
+  const wrapperTokenAddress = '0xC3154ccAC181eb9d71ccd53f29F425BDdD52d983'
   tx = await WrapperManager.mapToken(tokenAddress, wrapperTokenAddress)
   await tx.wait()
   print(colors.success, `Updated token ${tokenAddress} with wrapper ${wrapperTokenAddress}`)
