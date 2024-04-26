@@ -40,10 +40,10 @@ async function main() {
 
   print(colors.highlight, 'Updating token mapping...')
   const tokenAddress = '0xcb13945ca8104f813992e4315f8ffefe64ac49ca'
-  const wrapperTokenAddress = '0xC3154ccAC181eb9d71ccd53f29F425BDdD52d983'
+  const wrapperTokenAddress = '0xB7fdD27a8Df011816205a6e3cAA097DC4D8C2C5d'
   tx = await WrapperManager.mapToken(tokenAddress, wrapperTokenAddress)
   await tx.wait()
-  print(colors.success, `Updated token ${tokenAddress} with wrapper ${wrapperTokenAddress}`)
+  print(colors.success, `Updated token ${tokenAddress} with wrapper ${wrapperTokenAddress}: ${tx.hash}`)
 
   print(colors.highlight, 'Updating max duration...')
   const tokenToUpdate = '0xcb13945ca8104f813992e4315f8ffefe64ac49ca'
