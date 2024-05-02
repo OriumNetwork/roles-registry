@@ -120,6 +120,10 @@ export function generateRandomInt() {
   return Math.floor(Math.random() * 1000 * 1000) + 1
 }
 
+export function generateRandomIntBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min)) + min
+}
+
 export function generateRoleId(role: string) {
   return solidityKeccak256(['string'], [role])
 }
