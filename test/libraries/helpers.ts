@@ -14,8 +14,7 @@ async function getListItem(MockedList: Contract, key: number) {
 }
 
 function print(text: string) {
-  if (ENABLE_LOGS)
-    console.log(text)
+  if (ENABLE_LOGS) console.log(text)
 }
 
 function printListItem(n: number, item: any) {
