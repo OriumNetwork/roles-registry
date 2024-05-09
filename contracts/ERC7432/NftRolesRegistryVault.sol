@@ -139,9 +139,9 @@ contract NftRolesRegistryVault is IERC7432 {
         bytes32 _roleId
     ) external view returns (bytes memory data_) {
         if (roles[_tokenAddress][_tokenId][_roleId].expirationDate > block.timestamp) {
-            return roles[_tokenAddress][_tokenId][_roleId].data;
+            data_ = roles[_tokenAddress][_tokenId][_roleId].data;
         }
-        return '';
+        return data_;
     }
 
     function roleExpirationDate(
