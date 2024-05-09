@@ -14,8 +14,14 @@ export async function buildRole({
   revocable = true,
   data = HashZero,
 }): Promise<Role> {
+  let actualRoleId = ROLE
+  if (roleId && !roleId.startsWith('0x')) {
+    actualRoleId = generateRoleId(roleId)
+  } else {
+    actualRoleId = roleId
+  }
   return {
-    roleId: generateRoleId(roleId),
+    roleId: actualRoleId,
     tokenAddress: ethers.utils.getAddress(tokenAddress),
     tokenId,
     recipient,

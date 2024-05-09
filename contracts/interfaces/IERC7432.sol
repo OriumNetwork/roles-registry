@@ -67,10 +67,12 @@ interface IERC7432 is IERC165 {
     /** External Functions **/
 
     /// @notice Grants a role to a user.
+    /// @dev Reverts if sender is not approved or the NFT owner.
     /// @param _role The role attributes.
     function grantRole(Role calldata _role) external;
 
     /// @notice Revokes a role from a user.
+    /// @dev Reverts if sender is not approved or the original owner.
     /// @param _tokenAddress The token address.
     /// @param _tokenId The token identifier.
     /// @param _roleId The role identifier.
