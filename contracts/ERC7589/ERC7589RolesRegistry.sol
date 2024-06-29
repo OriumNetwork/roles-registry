@@ -74,7 +74,8 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
     modifier onlyTokenLockOwnerOrApproved(uint256 _lockId) {
         TokenLock storage _tokenLock = tokenLocks[_lockId];
         require(
-            msg.sender == _tokenLock.owner || isRoleApprovedForAll(_tokenLock.tokenAddress, _tokenLock.owner, msg.sender),
+            msg.sender == _tokenLock.owner ||
+                isRoleApprovedForAll(_tokenLock.tokenAddress, _tokenLock.owner, msg.sender),
             'ERC7589RolesRegistry: sender is not owner or approved'
         );
         _;
@@ -110,9 +111,7 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
         _grantERC7589Role(_lockId, _roleId, _recipient, _expirationDate, _revocable, _data);
     }
 
-    function revokeRole(
-        uint256 _lockId, bytes32 _roleId, address _recipient
-    ) external {
+    function revokeRole(uint256 _lockId, bytes32 _roleId, address _recipient) external {
         TokenLock storage _tokenLock = tokenLocks[_lockId];
         Role storage _role = roles[_lockId][_roleId];
         require(_role.expirationDate > block.timestamp, 'ERC7589RolesRegistry: role does not exist');
@@ -146,9 +145,7 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
         delete tokenLocks[_lockId];
         emit TokensUnlocked(_lockId);
 
-        _transferFrom(
-            address(this), _owner, _tokenAddress, _tokenId, _tokenAmount
-        );
+        _transferFrom(address(this), _owner, _tokenAddress, _tokenId, _tokenAmount);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external {
@@ -248,7 +245,12 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
         address _tokenAddress,
         uint256 _tokenId,
         uint256 _tokenAmount
-    ) private onlyAllowedTokenAddress(_tokenAddress) onlyOwnerOrApproved(_owner, _tokenAddress) returns (uint256 lockId_) {
+    )
+        private
+        onlyAllowedTokenAddress(_tokenAddress)
+        onlyOwnerOrApproved(_owner, _tokenAddress)
+        returns (uint256 lockId_)
+    {
         require(_tokenAmount > 0, 'ERC7589RolesRegistry: tokenAmount must be greater than zero');
         lockId_ = ++lockIdCount;
         tokenLocks[lockId_] = TokenLock(_owner, _tokenAddress, _tokenId, _tokenAmount);

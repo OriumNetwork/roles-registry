@@ -22,7 +22,7 @@ describe('ERC7589RolesRegistry', async () => {
   let tokenId: BigNumber
   let tokenAmount: BigNumber
   let expirationDate: number
-  let lockId = BigNumber.from(1)
+  const lockId = BigNumber.from(1)
 
   async function deployContracts() {
     const ERC7589RolesRegistryFactory = await ethers.getContractFactory('ERC7589RolesRegistry')
@@ -127,15 +127,12 @@ describe('ERC7589RolesRegistry', async () => {
     it('should lock tokens when sender is marketplace contract', async () => {
       await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
         .reverted
-      await expect(
-        ERC7589RolesRegistry.connect(owner).setMarketplaceAddress(anotherUser.address),
-      ).to.not.be.reverted
+      await expect(ERC7589RolesRegistry.connect(owner).setMarketplaceAddress(anotherUser.address)).to.not.be.reverted
       await lockTokens(anotherUser)
     })
   })
 
   describe('grantRole', async () => {
-
     beforeEach(async () => {
       await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
         .reverted
@@ -172,14 +169,7 @@ describe('ERC7589RolesRegistry', async () => {
     it('should revert when previous role is not revocable or expired', async () => {
       await grantRole({ revocable: false })
       await expect(
-        ERC7589RolesRegistry.connect(owner).grantRole(
-          lockId,
-          ROLE,
-          recipient.address,
-          expirationDate,
-          false,
-          HashZero,
-        ),
+        ERC7589RolesRegistry.connect(owner).grantRole(lockId, ROLE, recipient.address, expirationDate, false, HashZero),
       ).to.be.revertedWith('ERC7589RolesRegistry: role is not expired nor revocable')
     })
 
@@ -201,7 +191,6 @@ describe('ERC7589RolesRegistry', async () => {
   })
 
   describe('revokeRole', async () => {
-
     beforeEach(async () => {
       await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
         .reverted
@@ -217,18 +206,18 @@ describe('ERC7589RolesRegistry', async () => {
 
     it('should revert when sender is owner but role is not revocable nor expired', async () => {
       await grantRole({ revocable: false })
-      await expect(
-        ERC7589RolesRegistry.connect(owner).revokeRole(lockId, ROLE, recipient.address),
-      ).to.be.revertedWith('ERC7589RolesRegistry: role is not revocable or caller is not the approved')
+      await expect(ERC7589RolesRegistry.connect(owner).revokeRole(lockId, ROLE, recipient.address)).to.be.revertedWith(
+        'ERC7589RolesRegistry: role is not revocable or caller is not the approved',
+      )
     })
 
     it('should revert when role is expired', async () => {
       await grantRole()
       await time.increase(ONE_DAY)
 
-      await expect(
-        ERC7589RolesRegistry.revokeRole(lockId, ROLE, recipient.address),
-      ).to.be.revertedWith('ERC7589RolesRegistry: role does not exist')
+      await expect(ERC7589RolesRegistry.revokeRole(lockId, ROLE, recipient.address)).to.be.revertedWith(
+        'ERC7589RolesRegistry: role does not exist',
+      )
     })
 
     it('should revert when role was already revoked', async () => {
@@ -236,9 +225,9 @@ describe('ERC7589RolesRegistry', async () => {
         .to.emit(ERC7589RolesRegistry, 'RoleRevoked')
         .withArgs(lockId, ROLE, recipient.address)
 
-      await expect(
-        ERC7589RolesRegistry.revokeRole(lockId, ROLE, recipient.address),
-      ).to.be.revertedWith('ERC7589RolesRegistry: role does not exist')
+      await expect(ERC7589RolesRegistry.revokeRole(lockId, ROLE, recipient.address)).to.be.revertedWith(
+        'ERC7589RolesRegistry: role does not exist',
+      )
     })
 
     it('should revoke role when sender is recipient', async () => {
@@ -249,11 +238,13 @@ describe('ERC7589RolesRegistry', async () => {
 
     it('should revoke role when sender is approved by recipient', async () => {
       await expect(
-        ERC7589RolesRegistry.connect(recipient).setRoleApprovalForAll(MockErc1155Token.address, anotherUser.address, true),
+        ERC7589RolesRegistry.connect(recipient).setRoleApprovalForAll(
+          MockErc1155Token.address,
+          anotherUser.address,
+          true,
+        ),
       ).to.not.be.reverted
-      await expect(
-        ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address),
-      )
+      await expect(ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address))
         .to.emit(ERC7589RolesRegistry, 'RoleRevoked')
         .withArgs(lockId, ROLE, recipient.address)
     })
@@ -269,9 +260,7 @@ describe('ERC7589RolesRegistry', async () => {
         ERC7589RolesRegistry.connect(owner).setRoleApprovalForAll(MockErc1155Token.address, anotherUser.address, true),
       ).to.not.be.reverted
 
-      await expect(
-        ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address),
-      )
+      await expect(ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address))
         .to.emit(ERC7589RolesRegistry, 'RoleRevoked')
         .withArgs(lockId, ROLE, recipient.address)
     })
@@ -281,13 +270,15 @@ describe('ERC7589RolesRegistry', async () => {
         ERC7589RolesRegistry.connect(owner).setRoleApprovalForAll(MockErc1155Token.address, anotherUser.address, true),
       ).to.not.be.reverted
       await expect(
-        ERC7589RolesRegistry.connect(recipient).setRoleApprovalForAll(MockErc1155Token.address, anotherUser.address, true),
+        ERC7589RolesRegistry.connect(recipient).setRoleApprovalForAll(
+          MockErc1155Token.address,
+          anotherUser.address,
+          true,
+        ),
       ).to.not.be.reverted
 
       await grantRole({ revocable: false })
-      await expect(
-        ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address),
-      )
+      await expect(ERC7589RolesRegistry.connect(anotherUser).revokeRole(lockId, ROLE, recipient.address))
         .to.emit(ERC7589RolesRegistry, 'RoleRevoked')
         .withArgs(lockId, ROLE, recipient.address)
     })
@@ -302,11 +293,9 @@ describe('ERC7589RolesRegistry', async () => {
       expect(await ERC7589RolesRegistry.ownerOf(lockId)).to.be.equal(owner.address)
       expect(await ERC7589RolesRegistry.roleExpirationDate(lockId, ROLE)).to.be.equal(ZERO)
     })
-
   })
 
   describe('unlockTokens', async () => {
-
     beforeEach(async () => {
       await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
         .reverted
@@ -315,23 +304,21 @@ describe('ERC7589RolesRegistry', async () => {
     })
 
     it('should revert if lockId does not exist', async () => {
-      await expect(
-        ERC7589RolesRegistry.connect(recipient).unlockTokens(BigNumber.from(2)),
-      ).to.be.revertedWith('ERC7589RolesRegistry: sender is not owner or approved')
+      await expect(ERC7589RolesRegistry.connect(recipient).unlockTokens(BigNumber.from(2))).to.be.revertedWith(
+        'ERC7589RolesRegistry: sender is not owner or approved',
+      )
     })
 
     it('should revert if sender is not owner or approved', async () => {
-      await expect(
-        ERC7589RolesRegistry.connect(anotherUser).unlockTokens(lockId),
-      ).to.be.revertedWith('ERC7589RolesRegistry: sender is not owner or approved')
+      await expect(ERC7589RolesRegistry.connect(anotherUser).unlockTokens(lockId)).to.be.revertedWith(
+        'ERC7589RolesRegistry: sender is not owner or approved',
+      )
     })
 
     it('should revert if NFT is locked', async () => {
       await grantRole({ revocable: false })
 
-      await expect(ERC7589RolesRegistry.unlockTokens(lockId)).to.be.revertedWith(
-        'ERC7589RolesRegistry: NFT is locked',
-      )
+      await expect(ERC7589RolesRegistry.unlockTokens(lockId)).to.be.revertedWith('ERC7589RolesRegistry: NFT is locked')
     })
 
     it('should unlock token if sender is owner and NFT is not locked', async () => {
@@ -353,25 +340,22 @@ describe('ERC7589RolesRegistry', async () => {
         .to.emit(MockErc1155Token, 'TransferSingle')
         .withArgs(ERC7589RolesRegistry.address, ERC7589RolesRegistry.address, owner.address, tokenId, tokenAmount)
     })
-    
   })
 
   describe('setRoleApprovalForAll', async () => {
-
     it('should approve and revoke role approval for all', async () => {
-      expect(await ERC7589RolesRegistry.isRoleApprovedForAll(AddressZero, owner.address, anotherUser.address)).to.be.false
+      expect(await ERC7589RolesRegistry.isRoleApprovedForAll(AddressZero, owner.address, anotherUser.address)).to.be
+        .false
       expect(await ERC7589RolesRegistry.connect(owner).setRoleApprovalForAll(AddressZero, anotherUser.address, true))
         .to.emit(ERC7589RolesRegistry, 'RoleApprovalForAll')
         .withArgs(AddressZero, owner.address, anotherUser.address, true)
-      expect(await ERC7589RolesRegistry.isRoleApprovedForAll(AddressZero, owner.address, anotherUser.address)).to.be.true
+      expect(await ERC7589RolesRegistry.isRoleApprovedForAll(AddressZero, owner.address, anotherUser.address)).to.be
+        .true
     })
-
   })
 
   describe('View Functions', async () => {
-
     describe('when role is expired or does not exist', async () => {
-
       it('roleData should return default value', async () => {
         expect(await ERC7589RolesRegistry.roleData(lockId, ROLE)).to.be.equal('0x')
       })
@@ -383,11 +367,9 @@ describe('ERC7589RolesRegistry', async () => {
       it('isRoleRevocable should return default value', async () => {
         expect(await ERC7589RolesRegistry.isRoleRevocable(lockId, ROLE)).to.be.false
       })
-
     })
 
     describe('when role exists and is not expired', async () => {
-
       beforeEach(async () => {
         await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
           .reverted
@@ -422,18 +404,14 @@ describe('ERC7589RolesRegistry', async () => {
       it('isRoleRevocable should return whether the role is revocable', async () => {
         expect(await ERC7589RolesRegistry.isRoleRevocable(lockId, ROLE)).to.be.true
       })
-
     })
-
   })
 
   describe('Optional Extensions', async () => {
-
     describe('IERC7589LockTokensAndGrantRoleExtension', async () => {
-
       it('should lock tokens and grant role in a single transaction', async () => {
-        await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true))
-          .to.not.be.reverted
+        await expect(MockErc1155Token.connect(owner).setApprovalForAll(ERC7589RolesRegistry.address, true)).to.not.be
+          .reverted
 
         await expect(
           ERC7589RolesRegistry.connect(owner).lockTokensAndGrantRole(
@@ -445,8 +423,8 @@ describe('ERC7589RolesRegistry', async () => {
             recipient.address,
             expirationDate,
             true,
-            HashZero
-          )
+            HashZero,
+          ),
         )
           .to.emit(ERC7589RolesRegistry, 'TokensLocked')
           .withArgs(owner.address, 1, MockErc1155Token.address, tokenId, tokenAmount)
@@ -455,22 +433,19 @@ describe('ERC7589RolesRegistry', async () => {
           .to.emit(ERC7589RolesRegistry, 'RoleGranted')
           .withArgs(lockId, ROLE, recipient.address, expirationDate, true, HashZero)
       })
-
     })
-
   })
 
   describe('Manager Functions', async () => {
-
     it('should revert if not manager', async () => {
       await expect(
-        ERC7589RolesRegistry.connect(anotherUser).setTokenAddressAllowed(MockErc1155Token.address, true)
+        ERC7589RolesRegistry.connect(anotherUser).setTokenAddressAllowed(MockErc1155Token.address, true),
       ).to.be.revertedWith('ERC7589RolesRegistry: sender is not manager')
+      await expect(ERC7589RolesRegistry.connect(anotherUser).setManagerAddress(anotherUser.address)).to.be.revertedWith(
+        'ERC7589RolesRegistry: sender is not manager',
+      )
       await expect(
-        ERC7589RolesRegistry.connect(anotherUser).setManagerAddress(anotherUser.address)
-      ).to.be.revertedWith('ERC7589RolesRegistry: sender is not manager')
-      await expect(
-        ERC7589RolesRegistry.connect(anotherUser).setMarketplaceAddress(anotherUser.address)
+        ERC7589RolesRegistry.connect(anotherUser).setMarketplaceAddress(anotherUser.address),
       ).to.be.revertedWith('ERC7589RolesRegistry: sender is not manager')
     })
 
@@ -493,7 +468,6 @@ describe('ERC7589RolesRegistry', async () => {
       await expect(ERC7589RolesRegistry.setTokenAddressAllowed(AddressZero, false)).to.not.be.reverted
       expect(await ERC7589RolesRegistry.isTokenAddressAllowed(AddressZero)).to.be.false
     })
-
   })
 
   describe('ERC-165 supportsInterface', async () => {
@@ -514,6 +488,5 @@ describe('ERC7589RolesRegistry', async () => {
       const ifaceId = generateErc165InterfaceId(iface)
       expect(await ERC7589RolesRegistry.supportsInterface(ifaceId)).to.be.true
     })
-
   })
 })
