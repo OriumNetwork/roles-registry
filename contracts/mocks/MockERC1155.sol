@@ -13,8 +13,4 @@ contract MockERC1155 is ERC1155 {
     function mint(address to, uint256 tokenId, uint256 tokenAmount) external {
         _mint(to, tokenId, tokenAmount, '');
     }
-
-    //  function tokenURI(uint256 tokenId) public pure override returns (string memory) {
-    //    return string(abi.encodePacked('https://example.com/', tokenId.toString()));
-    //  }
 }
