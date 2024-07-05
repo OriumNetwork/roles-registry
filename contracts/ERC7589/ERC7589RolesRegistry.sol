@@ -142,9 +142,8 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
         uint256 _tokenId = tokenLocks[_lockId].tokenId;
         uint256 _tokenAmount = tokenLocks[_lockId].tokenAmount;
         delete tokenLocks[_lockId];
-        emit TokensUnlocked(_lockId);
-
         _transferFrom(address(this), _owner, _tokenAddress, _tokenId, _tokenAmount);
+        emit TokensUnlocked(_lockId);
     }
 
     function setRoleApprovalForAll(address _tokenAddress, address _operator, bool _approved) external {
@@ -253,8 +252,8 @@ contract ERC7589RolesRegistry is IERC7589, ERC1155Holder, IERC7589LockTokensAndG
         require(_tokenAmount > 0, 'ERC7589RolesRegistry: tokenAmount must be greater than zero');
         lockId_ = ++lockIdCount;
         tokenLocks[lockId_] = TokenLock(_owner, _tokenAddress, _tokenId, _tokenAmount);
-        emit TokensLocked(_owner, lockId_, _tokenAddress, _tokenId, _tokenAmount);
         _transferFrom(_owner, address(this), _tokenAddress, _tokenId, _tokenAmount);
+        emit TokensLocked(_owner, lockId_, _tokenAddress, _tokenId, _tokenAmount);
     }
 
     function _grantERC7589Role(
