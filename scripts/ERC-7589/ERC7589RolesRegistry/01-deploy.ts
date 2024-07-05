@@ -29,7 +29,7 @@ async function main() {
 
   const ERC7589RolesRegistryFactory = await ethers.getContractFactory(IMMUTABLE_CONTRACT_NAME, { signer: deployer })
   const ERC7589RolesRegistry = await ERC7589RolesRegistryFactory.deploy(MARKETPLACE_CONTRACT, {
-    gasPrice: ethers.utils.parseUnits('100', 'gwei')
+    gasPrice: ethers.utils.parseUnits('100', 'gwei'),
   })
   await ERC7589RolesRegistry.deployed()
 
@@ -38,7 +38,7 @@ async function main() {
   print(colors.highlight, `Verifying contract ${IMMUTABLE_CONTRACT_NAME} on ${NETWORK}...`)
   await hre.run('verify:verify', {
     address: ERC7589RolesRegistry.address,
-    constructorArguments: [ MARKETPLACE_CONTRACT ],
+    constructorArguments: [MARKETPLACE_CONTRACT],
   })
   print(colors.success, `Contract ${IMMUTABLE_CONTRACT_NAME} verified!`)
 }
