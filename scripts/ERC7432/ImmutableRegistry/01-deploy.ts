@@ -33,8 +33,8 @@ async function main() {
   console.log(`${ERC7432_IMMUTABLE_NAME} deployed at: ${EERC7432ImmutableRegistry.address}`)
 
   print(colors.highlight, `Verifying contract ${ERC7432_IMMUTABLE_NAME} on ${NETWORK}...`)
-  await hre.run('verify:verify',{
-    address: EERC7432ImmutableRegistry.address
+  await hre.run('verify:verify', {
+    address: EERC7432ImmutableRegistry.address,
   })
   print(colors.success, `Contract ${ERC7432_IMMUTABLE_NAME} verified!`)
 }
