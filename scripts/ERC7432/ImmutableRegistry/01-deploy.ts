@@ -10,7 +10,7 @@ const kmsCredentials = {
 }
 
 const NETWORK = network.name
-const ERC7432_NFTVAULT_NAME = 'NftRolesRegistryVault'
+const ERC7432_IMMUTABLE_NAME = 'ERC7432ImmutableRegistry'
 
 const networkConfig: any = network.config
 const provider = new ethers.providers.JsonRpcProvider(networkConfig.url || '')
@@ -23,20 +23,20 @@ async function main() {
   /** Deploy ERC7589RolesRegistry **/
 
   await confirmOrDie(
-    `Deploying ${ERC7432_NFTVAULT_NAME} contract on: ${NETWORK} network with ${deployerAddress}. Continue?`,
+    `Deploying ${ERC7432_IMMUTABLE_NAME} contract on: ${NETWORK} network with ${deployerAddress}. Continue?`,
   )
 
-  const ERC7432NftRolesRegistryFactory = await ethers.getContractFactory(ERC7432_NFTVAULT_NAME, { signer: deployer })
-  const EERC7432NftRolesRegistryVault = await ERC7432NftRolesRegistryFactory.deploy()
-  await EERC7432NftRolesRegistryVault.deployed()
+  const ERC7432ImmutableRegistryFactory = await ethers.getContractFactory(ERC7432_IMMUTABLE_NAME, { signer: deployer })
+  const EERC7432ImmutableRegistry = await ERC7432ImmutableRegistryFactory.deploy()
+  await EERC7432ImmutableRegistry.deployed()
 
-  console.log(`${ERC7432_NFTVAULT_NAME} deployed at: ${EERC7432NftRolesRegistryVault.address}`)
+  console.log(`${ERC7432_IMMUTABLE_NAME} deployed at: ${EERC7432ImmutableRegistry.address}`)
 
-  print(colors.highlight, `Verifying contract ${ERC7432_NFTVAULT_NAME} on ${NETWORK}...`)
+  print(colors.highlight, `Verifying contract ${ERC7432_IMMUTABLE_NAME} on ${NETWORK}...`)
   await hre.run('verify:verify', {
-    address: EERC7432NftRolesRegistryVault.address
+    address: EERC7432ImmutableRegistry.address
   })
-  print(colors.success, `Contract ${ERC7432_NFTVAULT_NAME} verified!`)
+  print(colors.success, `Contract ${ERC7432_IMMUTABLE_NAME} verified!`)
 }
 
 main()

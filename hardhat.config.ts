@@ -26,6 +26,8 @@ const {
   CRONOS_PROVIDER_URL,
   CRONOSSCAN_API_KEY,
   MOONSCAN_API_KEY,
+  ARBITRUM_ONE_URL,
+  ARBITRUM_API_KEY,
 } = process.env
 
 const BASE_CONFIG = {
@@ -71,6 +73,7 @@ const BASE_CONFIG = {
       cronosTestnet: CRONOSSCAN_API_KEY,
       cronos: CRONOSSCAN_API_KEY,
       moonbeam: MOONSCAN_API_KEY,
+      arbitrumOne: ARBITRUM_API_KEY,
     },
     customChains: [
       {
@@ -137,6 +140,11 @@ const PROD_CONFIG = {
     moonbeam: {
       chainId: 1284,
       url: MOONBEAM_PROVIDER_URL,
+      accounts: [DEV_PRIVATE_KEY],
+    },
+    arbitrum: {
+      chainId: 42161,
+      url: ARBITRUM_ONE_URL,
       accounts: [DEV_PRIVATE_KEY],
     },
   },
